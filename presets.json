@@ -6,8 +6,8 @@
   },
   "implement": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "todo", "sudo", "google_search"],
-    "instructions": "IMPLEMENT: focused changes only. Read before edit. Use todo for multi-step work. Use fast/agent subagents if helpful. Use sudo tool for elevation."
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
   },
   "review": {
     "thinkingLevel": "high",
