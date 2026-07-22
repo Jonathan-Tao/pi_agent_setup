@@ -19,3 +19,7 @@ The installer backs up conflicting managed files under `~/.pi/agent/backups/`, c
 - `agents/` and `extensions/`
 
 Commit and push repository changes normally when you want them available to other machines. The setup intentionally excludes credentials (`auth.json`), sessions, trust decisions, caches, downloaded packages, and generated model data.
+
+## Portability
+
+Keep machine-specific paths, operating-system details, package-manager preferences, hardware notes, and other host-local instructions in context files outside this repository (for example, a parent-directory `AGENTS.md`). Files committed here must remain portable across machines.
