@@ -4,7 +4,7 @@
 - Ask instead of guessing when a decision is required.
 - Don't touch secrets, push commits outside the managed configuration sync workflow, or switch models unless asked.
 - Use the `sudo` tool for elevation; never invent passwords.
-- `/plan` is read-only. Delegate only when it helps (`fast` for recon, `agent` otherwise).
+- `/plan` is read-only investigation: use read-only shell/Git commands and delegate reconnaissance when helpful (`fast` for recon, `agent` otherwise).
 
 ## Shared setup
 

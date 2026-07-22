@@ -1,12 +1,12 @@
 /**
  * Plan Mode Extension
  *
- * Read-only exploration mode for safe code analysis.
- * When enabled, built-in write tools are disabled.
+ * Read-only investigation mode for implementation planning.
+ * When enabled, direct write and elevation tools are disabled.
  *
  * Features:
  * - /plan command, Shift+Tab, or Ctrl+Alt+P to toggle
- * - Bash restricted to allowlisted read-only commands
+ * - Bash permits investigation commands while blocking known mutations
  * - Extracts numbered plan steps from "Plan:" sections
  * - On plan ready: execute / execute+clear context / refine / stay / exit
  * - [DONE:n] markers to complete steps during execution
@@ -27,7 +27,7 @@ import {
 } from "./utils.ts";
 
 // Tools
-const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "question", "google_search", "pdf"];
+const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "subagent", "question", "google_search", "pdf"];
 const NORMAL_MODE_TOOLS = [
 	"read",
 	"bash",
@@ -42,7 +42,7 @@ const NORMAL_MODE_TOOLS = [
 	"question",
 	"sudo",
 ];
-const PLAN_MODE_DISABLED_TOOLS = new Set<string>(["edit", "write", "subagent", "sudo"]);
+const PLAN_MODE_DISABLED_TOOLS = new Set<string>(["edit", "write", "sudo"]);
 const PLAN_MANAGED_TOOLS = new Set<string>([...PLAN_MODE_TOOLS, ...NORMAL_MODE_TOOLS]);
 
 interface PlanModeState {
@@ -96,6 +96,26 @@ function isCustomMessage(
 	return typeof m === "object" && m !== null && "customType" in m;
 }
 
+const SUBAGENT_PLAN_GUARD =
+	"PLAN MODE: Perform read-only reconnaissance only. Do not edit files, change repository state, install packages, or run destructive commands.\n\n";
+
+function guardSubagentTasks(input: Record<string, unknown>): void {
+	if (typeof input.task === "string" && !input.task.startsWith(SUBAGENT_PLAN_GUARD)) {
+		input.task = `${SUBAGENT_PLAN_GUARD}${input.task}`;
+	}
+	for (const key of ["tasks", "chain"] as const) {
+		const entries = input[key];
+		if (!Array.isArray(entries)) continue;
+		for (const entry of entries) {
+			if (typeof entry !== "object" || entry === null) continue;
+			const task = (entry as { task?: unknown }).task;
+			if (typeof task === "string" && !task.startsWith(SUBAGENT_PLAN_GUARD)) {
+				(entry as { task: string }).task = `${SUBAGENT_PLAN_GUARD}${task}`;
+			}
+		}
+	}
+}
+
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let planModeEnabled = false;
 	let executionMode = false;
@@ -109,7 +129,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	let toolsBeforePlanMode: string[] | undefined;
 
 	pi.registerFlag("plan", {
-		description: "Start in plan mode (read-only exploration)",
+		description: "Start in plan mode (read-only investigation)",
 		type: "boolean",
 		default: false,
 	});
@@ -210,7 +230,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		executionMarker = "";
 		todoItems = [];
 		enablePlanModeTools();
-		ctx.ui.notify("Plan mode enabled. Built-in write tools disabled.");
+		ctx.ui.notify("Plan mode enabled. Writes blocked; investigation tools available.");
 		updateStatus(ctx);
 		persistState();
 	}
@@ -313,7 +333,7 @@ Start implementing step ${firstTodoItem.step} now.`;
 	}
 
 	pi.registerCommand("plan", {
-		description: "Toggle plan mode (read-only exploration)",
+		description: "Toggle plan mode (read-only investigation)",
 		handler: async (_args, ctx) => togglePlanMode(ctx),
 	});
 
@@ -336,15 +356,21 @@ Start implementing step ${firstTodoItem.step} now.`;
 		});
 	}
 
-	// Block destructive bash commands in plan mode
+	// Keep delegated reconnaissance read-only and block known shell mutations.
 	pi.on("tool_call", async (event) => {
-		if (!planModeEnabled || event.toolName !== "bash") return;
+		if (!planModeEnabled) return;
+
+		if (event.toolName === "subagent") {
+			guardSubagentTasks(event.input as Record<string, unknown>);
+			return;
+		}
+		if (event.toolName !== "bash") return;
 
 		const command = event.input.command as string;
 		if (!isSafeCommand(command)) {
 			return {
 				block: true,
-				reason: `Plan mode: command blocked (not allowlisted). Use /plan to disable plan mode first.\nCommand: ${command}`,
+				reason: `Plan mode: command blocked because it appears to mutate state. Use /plan to disable plan mode first.\nCommand: ${command}`,
 			};
 		}
 	});
@@ -419,7 +445,7 @@ Start implementing step ${firstTodoItem.step} now.`;
 			return {
 				message: {
 					customType: "plan-mode-context",
-					content: `[PLAN MODE] Read-only. No edits. Bash allowlisted read-only. Output numbered steps under:
+					content: `[PLAN MODE] Read-only investigation. Do not edit files or change system/repository state. Use read-only shell and git commands, searches, documentation, questions, and read-only subagent reconnaissance as needed to gather enough evidence for an implementation plan. Output numbered steps under:
 
 Plan:
 1. ...

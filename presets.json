@@ -1,8 +1,8 @@
 {
   "plan": {
     "thinkingLevel": "high",
-    "tools": ["read", "bash", "grep", "find", "ls", "question", "google_search"],
-    "instructions": "PLAN: read-only. Explore thoroughly, then output numbered steps under a Plan: header. No edits. Prefer /plan for the full plan-mode workflow when available."
+    "tools": ["read", "bash", "grep", "find", "ls", "subagent", "question", "google_search", "pdf"],
+    "instructions": "PLAN: read-only investigation. Gather enough evidence for an implementation plan using read-only shell/Git commands, searches, documentation, questions, and read-only subagent reconnaissance as needed. Do not edit files or change repository/system state. Output numbered steps under a Plan: header. Prefer /plan for the full workflow when available."
   },
   "implement": {
     "thinkingLevel": "medium",

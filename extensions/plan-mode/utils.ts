@@ -3,101 +3,41 @@
  * Extracted for testability.
  */
 
-// Destructive commands blocked in plan mode
+// Known mutating or destructive commands blocked in plan mode. This is a
+// guardrail, not a shell sandbox: investigation commands are allowed unless
+// an executable at a shell-command boundary matches one of these patterns.
+const COMMAND_PREFIX = String.raw`(?:^|(?:&&|\|\||[;|\n])\s*)(?:(?:command|env)\s+)?`;
+const commandPattern = (body: string): RegExp => new RegExp(`${COMMAND_PREFIX}\\s*${body}`, "i");
+
 const DESTRUCTIVE_PATTERNS = [
-	/\brm\b/i,
-	/\brmdir\b/i,
-	/\bmv\b/i,
-	/\bcp\b/i,
-	/\bmkdir\b/i,
-	/\btouch\b/i,
-	/\bchmod\b/i,
-	/\bchown\b/i,
-	/\bchgrp\b/i,
-	/\bln\b/i,
-	/\btee\b/i,
-	/\btruncate\b/i,
-	/\bdd\b/i,
-	/\bshred\b/i,
+	commandPattern(String.raw`(?:rm|rmdir|mv|cp|mkdir|touch|chmod|chown|chgrp|ln|tee|truncate|dd|shred)\b`),
+	commandPattern(String.raw`npm\s+(?:install|uninstall|update|ci|link|publish)\b`),
+	commandPattern(String.raw`yarn\s+(?:add|remove|install|publish)\b`),
+	commandPattern(String.raw`pnpm\s+(?:add|remove|install|publish)\b`),
+	commandPattern(String.raw`pip\s+(?:install|uninstall)\b`),
+	commandPattern(String.raw`apt(?:-get)?\s+(?:install|remove|purge|update|upgrade)\b`),
+	commandPattern(String.raw`brew\s+(?:install|uninstall|upgrade)\b`),
+	commandPattern(
+		String.raw`git(?:\s+(?:(?:-C|-c|--git-dir|--work-tree|--namespace)\s+\S+|--(?:git-dir|work-tree|namespace)=\S+|--(?:no-pager|paginate|bare|literal-pathspecs|no-optional-locks)))*\s+(?:add|commit|push|pull|fetch|merge|rebase|reset|checkout|switch|restore|clean|stash|cherry-pick|revert|tag|init|clone|worktree|submodule\s+(?:add|update|deinit)|branch\s+-[dDmM])\b`,
+	),
+	commandPattern(String.raw`(?:sudo|su|kill|pkill|killall|reboot|shutdown)\b`),
+	commandPattern(String.raw`systemctl\s+(?:start|stop|restart|enable|disable)\b`),
+	commandPattern(String.raw`service\s+\S+\s+(?:start|stop|restart)\b`),
+	commandPattern(String.raw`(?:vim?|nano|emacs|code|subl)\b`),
+	commandPattern(String.raw`(?:eval|(?:ba|z|fi)?sh\s+-c)\b`),
 	/(^|[^<])>(?!>)/,
 	/>>/,
-	/\bnpm\s+(install|uninstall|update|ci|link|publish)/i,
-	/\byarn\s+(add|remove|install|publish)/i,
-	/\bpnpm\s+(add|remove|install|publish)/i,
-	/\bpip\s+(install|uninstall)/i,
-	/\bapt(-get)?\s+(install|remove|purge|update|upgrade)/i,
-	/\bbrew\s+(install|uninstall|upgrade)/i,
-	/\bgit\s+(add|commit|push|pull|merge|rebase|reset|checkout|branch\s+-[dD]|stash|cherry-pick|revert|tag|init|clone)/i,
-	/\bsudo\b/i,
-	/\bsu\b/i,
-	/\bkill\b/i,
-	/\bpkill\b/i,
-	/\bkillall\b/i,
-	/\breboot\b/i,
-	/\bshutdown\b/i,
-	/\bsystemctl\s+(start|stop|restart|enable|disable)/i,
-	/\bservice\s+\S+\s+(start|stop|restart)/i,
-	/\b(vim?|nano|emacs|code|subl)\b/i,
-];
-
-// Safe read-only commands allowed in plan mode
-const SAFE_PATTERNS = [
-	/^\s*cat\b/,
-	/^\s*head\b/,
-	/^\s*tail\b/,
-	/^\s*less\b/,
-	/^\s*more\b/,
-	/^\s*grep\b/,
-	/^\s*find\b/,
-	/^\s*ls\b/,
-	/^\s*pwd\b/,
-	/^\s*echo\b/,
-	/^\s*printf\b/,
-	/^\s*wc\b/,
-	/^\s*sort\b/,
-	/^\s*uniq\b/,
-	/^\s*diff\b/,
-	/^\s*file\b/,
-	/^\s*stat\b/,
-	/^\s*du\b/,
-	/^\s*df\b/,
-	/^\s*tree\b/,
-	/^\s*which\b/,
-	/^\s*whereis\b/,
-	/^\s*type\b/,
-	/^\s*env\b/,
-	/^\s*printenv\b/,
-	/^\s*uname\b/,
-	/^\s*whoami\b/,
-	/^\s*id\b/,
-	/^\s*date\b/,
-	/^\s*cal\b/,
-	/^\s*uptime\b/,
-	/^\s*ps\b/,
-	/^\s*top\b/,
-	/^\s*htop\b/,
-	/^\s*free\b/,
-	/^\s*git\s+(status|log|diff|show|branch|remote|config\s+--get)/i,
-	/^\s*git\s+ls-/i,
-	/^\s*npm\s+(list|ls|view|info|search|outdated|audit)/i,
-	/^\s*yarn\s+(list|info|why|audit)/i,
-	/^\s*node\s+--version/i,
-	/^\s*python\s+--version/i,
-	/^\s*curl\s/i,
-	/^\s*wget\s+-O\s*-/i,
-	/^\s*jq\b/,
-	/^\s*sed\s+-n/i,
-	/^\s*awk\b/,
-	/^\s*rg\b/,
-	/^\s*fd\b/,
-	/^\s*bat\b/,
-	/^\s*eza\b/,
 ];
 
 export function isSafeCommand(command: string): boolean {
-	const isDestructive = DESTRUCTIVE_PATTERNS.some((p) => p.test(command));
-	const isSafe = SAFE_PATTERNS.some((p) => p.test(command));
-	return !isDestructive && isSafe;
+	// Discard redirects to /dev/null; they suppress diagnostics without changing
+	// meaningful state and are common in reconnaissance commands.
+	const normalized = command
+		.replace(/\d*>>?\s*\/dev\/null\b/g, "")
+		// Quoted search patterns and arguments are data, not shell commands.
+		.replace(/'(?:[^']*)'/g, "''")
+		.replace(/"(?:\\.|[^"\\])*"/g, '""');
+	return !DESTRUCTIVE_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 export interface TodoItem {
