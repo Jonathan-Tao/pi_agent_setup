@@ -2,7 +2,7 @@
 
 - Be concise; make small, focused changes.
 - Ask instead of guessing when a decision is required.
-- Don't touch secrets, push commits, or switch models unless asked.
+- Don't touch secrets, push commits outside the managed configuration sync workflow, or switch models unless asked.
 - Use the `sudo` tool for elevation; never invent passwords.
 - `/plan` is read-only. Delegate only when it helps (`fast` for recon, `agent` otherwise).
 
@@ -12,5 +12,5 @@ This repository is the portable source for Pi's managed configuration, linked in
 
 - On a new machine, run `./install.sh`, inspect the host, and create or update `~/AGENTS.md` with concise machine-local context while preserving existing instructions. Never copy that file into this repository. Then restart Pi or run `/reload`.
 - Before editing managed configuration, run `git pull --ff-only` here.
-- Review and commit related configuration changes afterward; don't push unless asked.
+- Review, commit, and push related configuration changes afterward so they stay synchronized across machines.
 - Keep machine-specific context, credentials, sessions, caches, and generated state outside this repository.
