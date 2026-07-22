@@ -1,0 +1,41 @@
+{
+  "lastChangelogVersion": "0.81.0",
+  "theme": "light",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "low",
+  "hideThinkingBlock": true,
+  "quietStartup": true,
+  "defaultProjectTrust": "ask",
+  "enableInstallTelemetry": false,
+  "enableAnalytics": false,
+  "externalEditor": "code --wait",
+  "enabledModels": [
+    "xai/grok-4.5",
+    "xai/grok-4.3",
+    "openai-codex/gpt-5.5",
+    "openai-codex/gpt-5.6-sol",
+    "openai-codex/gpt-5.6-terra",
+    "openai-codex/gpt-5.4-mini"
+  ],
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 16000
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3
+  },
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time",
+  "doubleEscapeAction": "tree",
+  "terminal": {
+    "showImages": true,
+    "imageWidthCells": 60
+  },
+  "images": {
+    "autoResize": true,
+    "blockImages": false
+  }
+}

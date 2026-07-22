@@ -1,0 +1,22 @@
+{
+  "plan": {
+    "thinkingLevel": "high",
+    "tools": ["read", "bash", "grep", "find", "ls", "question", "google_search"],
+    "instructions": "PLAN: read-only. Explore thoroughly, then output numbered steps under a Plan: header. No edits. Prefer /plan for the full plan-mode workflow when available."
+  },
+  "implement": {
+    "thinkingLevel": "medium",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "todo", "sudo", "google_search"],
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Use todo for multi-step work. Use fast/agent subagents if helpful. Use sudo tool for elevation."
+  },
+  "review": {
+    "thinkingLevel": "high",
+    "tools": ["read", "bash", "grep", "find", "ls", "question", "google_search"],
+    "instructions": "REVIEW: no edits. Critical / Warnings / Suggestions with file:line."
+  },
+  "ask": {
+    "thinkingLevel": "low",
+    "tools": ["read", "grep", "find", "ls", "bash", "question", "google_search"],
+    "instructions": "ASK: answer/explore. No edits unless asked. Use question if you need clarification."
+  }
+}

@@ -1,0 +1,10 @@
+# Credentials and machine/runtime state must never be copied here.
+auth.json
+models.json
+models-store.json
+sessions/
+backups/
+git/
+npm/
+trust.json
+*.log
