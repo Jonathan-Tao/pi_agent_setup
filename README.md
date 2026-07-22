@@ -2,15 +2,29 @@
 
 Portable Pi agent configuration. Managed files are symlinked into `~/.pi/agent`, so edits made there immediately appear in this repository's working tree.
 
-## Install on a machine
+## Set up a new machine with Pi
 
-Install Pi, clone this repository, then run:
+1. Install Pi and Git.
+2. Clone and enter this repository:
 
-```sh
-./install.sh
-```
+   ```sh
+   git clone git@github.com:Jonathan-Tao/pi_agent_setup.git
+   cd pi_agent_setup
+   ```
 
-The installer backs up conflicting managed files under `~/.pi/agent/backups/`, creates links to the clone, and leaves credentials and runtime state untouched. Restart Pi or run `/reload` afterward.
+3. Start Pi from the repository:
+
+   ```sh
+   pi
+   ```
+
+4. Tell the agent:
+
+   > Set up this machine's Pi configuration to match the shared setup in this repository.
+
+The repository's `AGENTS.md` tells Pi to run `./install.sh`. The installer backs up conflicting managed files under `~/.pi/agent/backups/`, links the shared configuration into `~/.pi/agent`, and leaves machine-local state untouched. Restart Pi or run `/reload` afterward.
+
+For a non-agent installation, run `./install.sh` directly.
 
 ## Managed configuration
 
