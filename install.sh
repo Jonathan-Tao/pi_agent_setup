@@ -4,7 +4,7 @@ set -eu
 repo=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 config=${PI_CODING_AGENT_DIR:-"$HOME/.pi/agent"}
 backup="$config/backups/pi-agent-$(date +%Y%m%d-%H%M%S)"
-managed="AGENTS.md settings.json keybindings.json profiles.json agents extensions"
+managed="AGENTS.md settings.json keybindings.json presets.json agents extensions"
 
 mkdir -p "$config"
 

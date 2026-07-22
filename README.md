@@ -29,12 +29,8 @@ For a non-agent installation, run `./install.sh` directly.
 ## Managed configuration
 
 - `AGENTS.md` — global instructions/system-prompt context
-- `settings.json`, `keybindings.json`, `profiles.json`
+- `settings.json`, `keybindings.json`, `presets.json`
 - `agents/` and `extensions/`
-
-## Tool profiles
-
-Shared profiles live in `profiles.json`. Run `/profile` to see each profile and its tools, or `/profile <name>` to activate one. Use `/profile none` to restore the tools that were active before selecting a profile. Project-local `.pi/profiles.json` entries override shared profiles with the same name.
 
 Commit and push repository changes normally when you want them available to other machines. The setup intentionally excludes credentials (`auth.json`), sessions, trust decisions, caches, downloaded packages, and generated model data.
 
