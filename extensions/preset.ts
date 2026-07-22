@@ -297,11 +297,8 @@ export default function presetExtension(pi: ExtensionAPI) {
 	 * Update status indicator.
 	 */
 	function updateStatus(ctx: ExtensionContext) {
-		if (activePresetName) {
-			ctx.ui.setStatus("preset", ctx.ui.theme.fg("accent", `preset:${activePresetName}`));
-		} else {
-			ctx.ui.setStatus("preset", undefined);
-		}
+		const presetName = activePresetName ?? "default";
+		ctx.ui.setStatus("preset", ctx.ui.theme.fg("accent", `preset:${presetName}`));
 	}
 
 	function getPresetOrder(): string[] {
