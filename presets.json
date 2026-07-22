@@ -9,6 +9,11 @@
     "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
     "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
   },
+  "IEM-Firmware": {
+    "thinkingLevel": "medium",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
+  },
   "web-dev": {
     "thinkingLevel": "medium",
     "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "browser", "google_search", "subagent", "question", "sudo"],
