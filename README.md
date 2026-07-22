@@ -20,11 +20,35 @@ Portable Pi agent configuration. Managed files are symlinked into `~/.pi/agent`,
 
 4. Tell the agent:
 
-   > Set up this machine's Pi configuration to match the shared setup in this repository.
+   > Set up this machine's Pi configuration to match the shared setup in this repository. Run the installer, inspect this host, and create or update my machine-local `~/AGENTS.md` without overwriting existing instructions. Do not put machine-specific information or secrets in the repository.
 
-The repository's `AGENTS.md` tells Pi to run `./install.sh`. The installer backs up conflicting managed files under `~/.pi/agent/backups/`, links the shared configuration into `~/.pi/agent`, and leaves machine-local state untouched. Restart Pi or run `/reload` afterward.
+The repository's `AGENTS.md` directs Pi through the setup. The agent will:
 
-For a non-agent installation, run `./install.sh` directly.
+1. Run `./install.sh`.
+2. Back up conflicting managed files under `~/.pi/agent/backups/`.
+3. Link the shared configuration into `~/.pi/agent`.
+4. Inspect the host and create or update the untracked, machine-local `~/AGENTS.md`.
+5. Ask you to restart Pi or run `/reload`.
+
+For a non-agent installation, run `./install.sh` directly and create `~/AGENTS.md` using the guidance below.
+
+## Machine-local context
+
+`~/AGENTS.md` is not part of this repository. It gives Pi host-specific context without leaking those details into the shared setup. Preserve anything already in the file and keep it short. Include only useful facts such as:
+
+```markdown
+# Machine context (pi)
+
+- **OS:** [distribution and base]
+- **Desktop:** [desktop and display protocol]
+- **Shell:** [interactive shell]
+- **Packages:** [preferred package manager]
+- **Project locations:** [important local paths, if any]
+
+Keep this file short. Project-specific rules go in each repository's `AGENTS.md`.
+```
+
+The setting-up agent should discover these values from the host rather than copying another machine's values. Do not include passwords, API keys, tokens, account data, or other secrets.
 
 ## Managed configuration
 
