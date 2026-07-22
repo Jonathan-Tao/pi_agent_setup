@@ -9,6 +9,11 @@
     "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
     "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
   },
+  "web-dev": {
+    "thinkingLevel": "medium",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "browser", "google_search", "subagent", "question", "sudo"],
+    "instructions": "WEB DEV: make focused changes and verify them in the browser. Read before editing. Start or locate the development server, use browser snapshots for interaction and screenshots for visual checks, inspect console errors, and report what was tested."
+  },
   "review": {
     "thinkingLevel": "high",
     "tools": ["read", "bash", "grep", "find", "ls", "question", "google_search"],

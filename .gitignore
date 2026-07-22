@@ -6,5 +6,6 @@ sessions/
 backups/
 git/
 npm/
+node_modules/
 trust.json
 *.log

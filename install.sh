@@ -29,6 +29,12 @@ for entry in $managed; do
     ln -s "$source_path" "$target_path"
 done
 
+browser_extension="$repo/extensions/browser"
+if [ -f "$browser_extension/package.json" ]; then
+    printf 'Installing browser extension dependencies...\n'
+    (cd "$browser_extension" && npm install --omit=dev && npx playwright install chromium)
+fi
+
 printf 'Pi configuration linked from %s\n' "$repo"
 if [ -d "$backup" ]; then
     printf 'Previous files backed up to %s\n' "$backup"

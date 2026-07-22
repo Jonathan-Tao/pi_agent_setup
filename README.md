@@ -56,6 +56,8 @@ The setting-up agent should discover these values from the host rather than copy
 - `settings.json`, `keybindings.json`, `presets.json`
 - `agents/` and `extensions/`
 
+The Playwright browser extension lives in `extensions/browser/`. `install.sh` installs its npm dependency and Chromium runtime. Use `/preset web-dev` to enable the `browser` tool alongside the normal implementation and web-search tools.
+
 Commit and push repository changes normally when you want them available to other machines. The setup intentionally excludes credentials (`auth.json`), sessions, trust decisions, caches, downloaded packages, and generated model data.
 
 ## Portability
