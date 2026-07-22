@@ -3,7 +3,7 @@
   "theme": "light",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "low",
+  "defaultThinkingLevel": "medium",
   "hideThinkingBlock": true,
   "quietStartup": true,
   "defaultProjectTrust": "ask",
