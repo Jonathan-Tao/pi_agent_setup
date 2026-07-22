@@ -11,8 +11,8 @@
   },
   "IEM-Firmware": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
-    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "cubemx", "subagent", "question", "sudo", "google_search"],
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation. For STM32 .ioc work, use cubemx in this order: discover and inspect, query exact properties, preview then apply patch, validate the unchanged result with CubeMX, preview generation in isolation, and only then apply generation when requested. Treat CubeMX as the sole semantic authority and do not bypass version/package mismatch warnings without explicit user approval."
   },
   "web-dev": {
     "thinkingLevel": "medium",
