@@ -63,14 +63,8 @@ export default function cubemxExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "cubemx",
     label: "STM32CubeMX",
-    description: "Discover, inspect, query, losslessly patch, validate, and safely generate STM32 CubeMX .ioc projects. Patch previews by default; generation previews in an isolated copy by default. CubeMX is the semantic authority.",
-    promptSnippet: "Inspect, query, losslessly patch, validate, and safely generate STM32CubeMX .ioc projects",
-    promptGuidelines: [
-      "For any CubeMX-generated code changes, update the .ioc with cubemx and regenerate; never make fragile manual edits to generated code.",
-      "For STM32 .ioc changes, use cubemx to inspect and query exact properties before patching, then preview the patch before applying it.",
-      "After cubemx patches an .ioc file, validate that exact content and preview generation before applying generation.",
-      "Treat CubeMX as the semantic authority; do not use cubemx allowVersionMismatch without explicit user approval.",
-    ],
+    description: "Inspect and safely modify STM32CubeMX .ioc projects.",
+    promptSnippet: "Inspect and safely modify STM32CubeMX .ioc projects",
     parameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       if (signal?.aborted) throw new Error("CubeMX operation cancelled");
