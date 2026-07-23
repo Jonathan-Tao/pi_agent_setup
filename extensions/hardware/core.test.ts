@@ -16,6 +16,7 @@ test("content classification does not require conventional filenames", () => {
   assert.equal(classifyArtifact("holes.weird", Buffer.from("M48\nMETRIC,TZ\nT01C0.3\n%\nX10Y10\n")).kind, "drill");
   assert.equal(classifyArtifact("board.xml", Buffer.from("<?xml version=\"1.0\"?><IPC-2581></IPC-2581>\n")).kind, "ipc-2581");
   assert.equal(classifyArtifact("metadata-without-extension", Buffer.from("Designator,Comment,Footprint\nR1,10k,0402\n")).kind, "bom");
+  assert.equal(classifyArtifact("controller.ioc", Buffer.from("Mcu.Name=STM32H7\nMxCube.Version=6.14.0\n")).kind, "unknown");
 });
 
 test("discovery supports arbitrary nesting, honors ignore rules, and skips symlinks", async () => {

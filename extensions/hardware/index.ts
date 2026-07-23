@@ -101,9 +101,6 @@ function comparison(index: HardwareIndex): { lines: string[]; findings: object[]
     for (const ref of bomRefs) if (!placementRefs.has(ref)) findings.push({ severity: "warning", category: "assembly", message: `${ref} is in BOM but absent from placement` });
     for (const ref of placementRefs) if (!bomRefs.has(ref)) findings.push({ severity: "warning", category: "assembly", message: `${ref} is placed but absent from BOM` });
   }
-  const labels = new Set(index.parsed.filter((item) => item.artifact.kind === "cubemx").flatMap((item) => Object.entries(item.metadata).filter(([key]) => key.endsWith("GPIO_Label")).map(([, value]) => normalizeLookup(String(value)))));
-  const schematicNetNames = new Set(schematic.map((net) => normalizeLookup(net.name)));
-  for (const label of labels) if (!schematicNetNames.has(label)) findings.push({ severity: "warning", category: "firmware", message: `CubeMX GPIO label ${label} has no exact schematic net-name match; no physical-pin mapping was inferred` });
   const lines = findings.length ? findings.map((item) => `${item.severity.toUpperCase()} ${item.category}: ${item.message}`) : ["No cross-artifact conflicts found in represented data."];
   if (!schematic.length) lines.unshift("Logical comparison unavailable: no parsed schematic netlist.");
   if (!pcb.length && !manufactured.length) lines.unshift("PCB comparison unavailable: no parsed semantic PCB or IPC-D-356 connectivity.");
@@ -198,11 +195,13 @@ export default function hardwareExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "hardware",
     label: "Hardware Artifacts",
-    description: "Discover and inspect arbitrarily located schematic, netlist, BOM, placement, IPC-D-356, Gerber, Excellon, IPC-2581, CubeMX, and PDF artifacts. Connectivity comes only from explicit netlists; PDFs are visual hints. Separate parsed facts, deterministic violations, visual hints, and diagnostic hypotheses. Results are bounded and provenance-aware.",
-    promptSnippet: "Find, inspect, trace, compare, check, search, and render hardware-design artifacts anywhere in the project",
+    description: "Use for questions, reviews, and bug triage about electronic hardware. Discover and inspect arbitrarily located schematic, netlist, BOM, placement, IPC-D-356, Gerber, Excellon, IPC-2581, and PDF artifacts. Connectivity comes only from explicit netlists; PDFs are visual hints. Separate parsed facts, deterministic violations, visual hints, and diagnostic hypotheses. Results are bounded and provenance-aware. Use the separate cubemx tool for STM32CubeMX configuration.",
+    promptSnippet: "Answer hardware questions and investigate hardware bugs using design artifacts found anywhere in the project",
     promptGuidelines: [
-      "Use hardware to discover hardware artifacts by content instead of assuming a folder layout.",
+      "Use hardware for questions, reviews, and bug triage about boards, schematics, connectivity, components, assembly, PCB layout, or fabrication artifacts.",
+      "Use hardware discovery instead of assuming a folder layout.",
       "When using hardware, treat netlists as connectivity facts, PDFs as visual hints, and label diagnostic hypotheses and passive traversal as inference.",
+      "Use cubemx, not hardware, for STM32CubeMX .ioc configuration or semantics.",
     ],
     parameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {

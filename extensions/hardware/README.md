@@ -1,6 +1,6 @@
 # Hardware artifact extension
 
-The read-only `hardware` tool lets Pi find and inspect schematic, assembly, PCB, fabrication, firmware-configuration, and PDF artifacts without requiring a repository layout or prescribed filenames. Discovery starts at the current working directory by default and classifies files from content. Explicit `root` and `paths` arguments can narrow or override discovery.
+The read-only `hardware` tool lets Pi answer questions, review designs, and triage bugs involving schematics, components, assembly, PCB layout, fabrication, and PDF artifacts without requiring a repository layout or prescribed filenames. Discovery starts at the current working directory by default and classifies files from content. Explicit `root` and `paths` arguments can narrow or override discovery.
 
 The tool is enabled by the managed `IEM-Firmware` preset. Run `/preset IEM-Firmware`, then ask Pi to discover or investigate the hardware. It does not preload artifact contents into model context.
 
@@ -31,7 +31,6 @@ A model should report parsed facts, deterministic violations, visual hints, and 
 | IPC-D-356 | Experimental until validated against a team Altium export | Manufactured connectivity |
 | IPC-2581 | Experimental subset until validated against a team Altium export | Components, positions, and logical PCB net records |
 | ODB++ archive | Detection only | Reported as unsupported for semantic queries |
-| STM32CubeMX `.ioc` | Supported metadata subset | MCU identity and GPIO-label comparison hints |
 | JSON design manifest | Supported | Reviewed required/forbidden connection checks |
 | YAML design manifest | Detection only | Reported as unsupported; use JSON |
 
@@ -51,7 +50,7 @@ All paths are relative to Pi's current working directory and cannot escape it.
 - `trace`: bounded schematic traversal. Optional `depth`; set `traversePassives` only when inferred traversal is useful.
 - `location`: show explicit placement/PCB coordinates for a reference.
 - `render`: render a PDF page or Gerber file. Optional `query` selects a path substring; `page` defaults to 1.
-- `compare`: compare schematic, PCB, manufactured, BOM, placement, and CubeMX evidence when available.
+- `compare`: compare schematic, PCB, manufactured, BOM, and placement evidence when available.
 - `check`: run deterministic checks over represented data, including an optional JSON manifest's required and forbidden connections.
 
 Except for `discover`, actions accept one of:
@@ -104,7 +103,7 @@ PDF matches and images are visual hints. A PDF-only project has no supported log
 ### Compare design domains
 
 ```json
-{"action":"compare","paths":["design.net","board.xml","board.356","bom.csv","pick-place.csv","controller.ioc"]}
+{"action":"compare","paths":["design.net","board.xml","board.356","bom.csv","pick-place.csv"]}
 {"action":"check","paths":["design.net","board.xml","board.356","bom.csv","pick-place.csv"]}
 ```
 
@@ -118,10 +117,9 @@ For an unresponsive SPI device, ask Pi to:
 2. Inspect status to confirm logical connectivity is available.
 3. Look up the device and MCU components.
 4. Trace chip-select, clock, MOSI, MISO, interrupt, power, and reset nets.
-5. Compare exact CubeMX GPIO labels when available.
-6. Render the relevant schematic pages for notes and visual context.
-7. Run deterministic checks.
-8. Present hypotheses separately, citing supporting and contradicting evidence and suggesting measurements at explicit pins or test points.
+5. Render the relevant schematic pages for notes and visual context.
+6. Run deterministic checks.
+7. Present hypotheses separately, citing supporting and contradicting evidence and suggesting measurements at explicit pins or test points.
 
 ### Optional design-intent manifest
 
@@ -137,6 +135,8 @@ A JSON file can add reviewed, deterministic connection expectations without affe
 ```
 
 Include the manifest in `paths` and run `check`. Each record requires string `ref`, `pin`, and `net` fields and may have a `note`. Netlist facts remain authoritative; the manifest supplies requirements, not connections.
+
+Use the separate `cubemx` tool for STM32CubeMX `.ioc` inspection, queries, validation, and generation. The `hardware` tool deliberately does not parse or compare CubeMX configuration.
 
 ## Cache and dependencies
 

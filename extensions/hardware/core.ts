@@ -12,7 +12,7 @@ const DEFAULT_SNIFF_BYTES = 256 * 1024;
 const DEFAULT_MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 const SKIP_DIRECTORIES = new Set([".git", ".cache", ".idea", ".vscode", "node_modules", "bazel-bin", "bazel-out", "bazel-testlogs", "dist", "build"]);
 
-export type ArtifactKind = "pdf" | "schematic-netlist" | "bom" | "placement" | "ipc-d-356" | "gerber" | "drill" | "ipc-2581" | "odb++" | "cubemx" | "manifest" | "unknown";
+export type ArtifactKind = "pdf" | "schematic-netlist" | "bom" | "placement" | "ipc-d-356" | "gerber" | "drill" | "ipc-2581" | "odb++" | "manifest" | "unknown";
 export type Capability = "visualSchematic" | "logicalConnectivity" | "partMetadata" | "assemblyPlacement" | "fabricationGeometry" | "manufacturedConnectivity" | "semanticLayout" | "designIntent";
 export type CapabilityState = "available" | "experimental" | "absent" | "unsupported" | "parse-failed";
 
@@ -127,7 +127,6 @@ export function classifyArtifact(name: string, buffer: Buffer): { kind: Artifact
   if (/^P\s+JOB|^3(?:17|27)\b/m.test(head) || extension === ".356") return { kind: "ipc-d-356", confidence: 0.9, parser: "ipc-d-356", evidence: ["IPC-D-356 record marker"] };
   if (/^M48\s*$/m.test(head) && /^(?:INCH|METRIC)(?:,|$)/m.test(head)) return { kind: "drill", confidence: 0.96, parser: "excellon", evidence: ["Excellon M48 and unit markers"] };
   if (/%FS[LTD][AI]X\d+Y\d+\*%/i.test(head) || (/%MO(?:IN|MM)\*%/i.test(head) && /M0?2\*/.test(head))) return { kind: "gerber", confidence: 0.96, parser: "gerber", evidence: ["RS-274X format/unit markers"] };
-  if (/\bMcu\.Name=|\bMxCube\.Version=/m.test(head) && extension === ".ioc") return { kind: "cubemx", confidence: 0.98, parser: "cubemx-ioc", evidence: ["CubeMX properties"] };
   if ((extension === ".tgz" || extension === ".zip" || extension === ".tar") && /odb/i.test(lower)) return { kind: "odb++", confidence: 0.55, parser: "odb-detect", evidence: ["ODB-like archive filename; contents not parsed"] };
   if (/^\s*\[\s*[^\]\r\n]+\s*\]\s*\r?\n[\s\S]*?^\s*\(\s*[^\)\r\n]+/m.test(head) || /\(\s*[^\r\n]+\r?\n\s*[A-Za-z]+\d+[-.]\w+/m.test(head)) return { kind: "schematic-netlist", confidence: 0.88, parser: "altium-protel-netlist", evidence: ["Protel component/net record structure"] };
   if ([".csv", ".tsv"].includes(extension) || /(?:^|[,;\t])\s*(?:designator|refdes|reference)\s*(?:[,;\t]|$)/i.test(head.split(/\r?\n/, 1)[0] ?? "")) {
@@ -355,11 +354,6 @@ function parseDrill(artifact: Artifact, text: string): ParsedArtifact {
   const unitMatch = text.match(/^(INCH|METRIC)(?:,([^\r\n]+))?/mi); const tools = [...text.matchAll(/^T\d+C/igm)].length; const features = [...text.matchAll(/^X[-+]?\d+Y[-+]?\d+/igm)].length;
   return { artifact, components: [], nets: [], diagnostics: [], geometry: { kind: "drill", units: unitMatch?.[1]?.toUpperCase(), format: unitMatch?.[2], features, tools, provenance: { path: artifact.path, parser: artifact.parser, evidence: "fact" } }, metadata: { units: unitMatch?.[1] ?? "unknown", tools, holes: features } };
 }
-function parseCubeMx(artifact: Artifact, text: string): ParsedArtifact {
-  const metadata: Record<string, string> = {}; for (const line of text.split(/\r?\n/)) { const match = line.match(/^([^#=]+)=(.*)$/); if (match && (/GPIO_Label$/.test(match[1]) || /^Mcu\.(?:Name|CPN)/.test(match[1]))) metadata[match[1]] = match[2]; }
-  return { artifact, components: [], nets: [], diagnostics: [], metadata };
-}
-
 function parseManifest(artifact: Artifact, text: string): ParsedArtifact {
   const diagnostics: Diagnostic[] = [];
   if (!artifact.path.toLowerCase().endsWith(".json")) return { artifact, components: [], nets: [], diagnostics: [{ severity: "warning", message: "YAML design-intent manifests are detected but not parsed; use JSON", path: artifact.path }], metadata: {} };
@@ -391,7 +385,6 @@ export async function parseArtifact(artifact: Artifact, textOverride?: string): 
     if (artifact.kind === "ipc-d-356") return parseIpc356(artifact, text);
     if (artifact.kind === "gerber") return parseGerber(artifact, text);
     if (artifact.kind === "drill") return parseDrill(artifact, text);
-    if (artifact.kind === "cubemx") return parseCubeMx(artifact, text);
     if (artifact.kind === "manifest") return parseManifest(artifact, text);
     return { artifact, components: [], nets: [], diagnostics: [{ severity: "warning", message: `No semantic parser for ${artifact.kind}`, path: artifact.path }], metadata: {} };
   } catch (error) {
