@@ -195,14 +195,8 @@ export default function hardwareExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "hardware",
     label: "Hardware Artifacts",
-    description: "Use for questions, reviews, and bug triage about electronic hardware. Discover and inspect arbitrarily located schematic, netlist, BOM, placement, IPC-D-356, Gerber, Excellon, IPC-2581, and PDF artifacts. Connectivity comes only from explicit netlists; PDFs are visual hints. Separate parsed facts, deterministic violations, visual hints, and diagnostic hypotheses. Results are bounded and provenance-aware. Use the separate cubemx tool for STM32CubeMX configuration.",
-    promptSnippet: "Answer hardware questions and investigate hardware bugs using design artifacts found anywhere in the project",
-    promptGuidelines: [
-      "Use hardware for questions, reviews, and bug triage about boards, schematics, connectivity, components, assembly, PCB layout, or fabrication artifacts.",
-      "Use hardware discovery instead of assuming a folder layout.",
-      "When using hardware, treat netlists as connectivity facts, PDFs as visual hints, and label diagnostic hypotheses and passive traversal as inference.",
-      "Use cubemx, not hardware, for STM32CubeMX .ioc configuration or semantics.",
-    ],
+    description: "Find and inspect hardware design artifacts for hardware questions, design review, and bug triage.",
+    promptSnippet: "Find and inspect hardware design artifacts",
     parameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       if (signal?.aborted) throw new Error("Hardware operation cancelled");
