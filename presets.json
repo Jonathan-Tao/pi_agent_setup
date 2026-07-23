@@ -12,7 +12,7 @@
   "IEM-Firmware": {
     "thinkingLevel": "medium",
     "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "cubemx", "hardware", "subagent", "question", "sudo", "google_search"],
-    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation. Use cubemx for STM32CubeMX .ioc work."
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation."
   },
   "web-dev": {
     "thinkingLevel": "medium",
