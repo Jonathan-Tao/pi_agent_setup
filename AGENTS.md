@@ -3,8 +3,8 @@
 - Be concise; make small, focused changes.
 - Ask instead of guessing when a decision is required.
 - Don't touch secrets, push commits outside the managed configuration sync workflow, or switch models unless asked.
-- Use the `sudo` tool for elevation; never invent passwords.
 - `/plan` is read-only investigation: use read-only shell/Git commands and delegate reconnaissance when helpful (`fast` for recon, `agent` otherwise).
+- When changing Pi prompts, tool metadata, presets, or context, keep wording specific to its scope, describe each capability once, avoid repeating existing system instructions, and verify the assembled prompt and active tools afterward.
 
 ## Shared setup
 

@@ -374,12 +374,8 @@ export default function sudoExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "sudo",
 		label: "sudo",
-		description:
-			"Run a shell command with sudo (root privileges). Prompts the user to approve and enter their password if needed. Prefer this over bash when the command requires elevation.",
-		promptSnippet: "Run a command with sudo (prompts user; no leading sudo in command)",
-		promptGuidelines: [
-			"Use the sudo tool for elevation — never bash with sudo. Pass command without a leading sudo.",
-		],
+		description: "Run a command with root privileges, prompting the user for approval and credentials when needed.",
+		promptSnippet: "Run a command with root privileges",
 		parameters: Type.Object({
 			command: Type.String({
 				description: "Shell command to run under sudo (without a leading sudo)",
