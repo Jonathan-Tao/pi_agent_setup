@@ -58,6 +58,8 @@ The setting-up agent should discover these values from the host rather than copy
 
 The Playwright browser extension lives in `extensions/browser/`. `install.sh` installs its npm dependency and Chromium runtime. Use `/preset web-dev` to enable the `browser` tool alongside the normal implementation and web-search tools.
 
+The read-only [`hardware`](extensions/hardware/README.md) extension discovers and inspects schematic, netlist, BOM, placement, PCB, fabrication, CubeMX, and PDF artifacts without requiring a folder convention. Use `/preset IEM-Firmware` to enable it. Connectivity comes only from explicit netlist exports; PDF results are visual hints.
+
 Commit and push repository changes normally when you want them available to other machines. The setup intentionally excludes credentials (`auth.json`), sessions, trust decisions, caches, downloaded packages, and generated model data.
 
 ## Portability

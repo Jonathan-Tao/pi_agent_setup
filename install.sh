@@ -35,6 +35,12 @@ if [ -f "$browser_extension/package.json" ]; then
     (cd "$browser_extension" && npm install --omit=dev && npx playwright install chromium)
 fi
 
+hardware_extension="$repo/extensions/hardware"
+if [ -f "$hardware_extension/package.json" ]; then
+    printf 'Installing hardware extension dependencies...\n'
+    (cd "$hardware_extension" && npm install --omit=dev)
+fi
+
 printf 'Pi configuration linked from %s\n' "$repo"
 if [ -d "$backup" ]; then
     printf 'Previous files backed up to %s\n' "$backup"

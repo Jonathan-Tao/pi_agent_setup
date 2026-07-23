@@ -37,6 +37,15 @@ export default function toolsExtension(pi: ExtensionAPI) {
 	// Track enabled tools
 	let enabledTools: Set<string> = new Set();
 	let allTools: ToolInfo[] = [];
+	let presetTools: string[] | undefined;
+
+	pi.events.on("preset:tools", (data: unknown) => {
+		const tools = (data as { tools?: unknown })?.tools;
+		if (!Array.isArray(tools) || !tools.every((tool) => typeof tool === "string")) return;
+		presetTools = tools;
+		enabledTools = new Set(tools);
+		applyTools();
+	});
 
 	// Persist current state
 	function persistState() {
@@ -71,6 +80,10 @@ export default function toolsExtension(pi: ExtensionAPI) {
 			// Restore saved tool selection (filter to only tools that still exist)
 			const allToolNames = allTools.map((t) => t.name);
 			enabledTools = new Set(savedTools.filter((t: string) => allToolNames.includes(t)));
+			applyTools();
+		} else if (presetTools) {
+			// Preserve the preset extension's explicit session tool selection.
+			enabledTools = new Set(presetTools);
 			applyTools();
 		} else {
 			// Keep the default prompt lean; /tools can enable optional tools per session.

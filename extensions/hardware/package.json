@@ -1,0 +1,9 @@
+{
+  "name": "pi-hardware-extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test core.test.ts",
+    "check": "node --experimental-strip-types --check index.ts && node --experimental-strip-types --check core.ts"
+  }
+}

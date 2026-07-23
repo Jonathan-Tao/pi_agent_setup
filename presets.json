@@ -11,8 +11,8 @@
   },
   "IEM-Firmware": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "cubemx", "subagent", "question", "sudo", "google_search"],
-    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation. For STM32 .ioc work, use cubemx in this order: discover and inspect, query exact properties, preview then apply patch, validate the unchanged result with CubeMX, preview generation in isolation, and only then apply generation when requested. Treat CubeMX as the sole semantic authority and do not bypass version/package mismatch warnings without explicit user approval."
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "cubemx", "hardware", "subagent", "question", "sudo", "google_search"],
+    "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful. Use sudo tool for elevation. For STM32 .ioc work, use cubemx in this order: discover and inspect, query exact properties, preview then apply patch, validate the unchanged result with CubeMX, preview generation in isolation, and only then apply generation when requested. Treat CubeMX as the sole authority for CubeMX semantics and do not bypass version/package mismatch warnings without explicit user approval. For hardware artifacts, use hardware discovery rather than assuming folders; treat explicit netlists as connectivity facts, PDFs as visual hints, and label passive traversal and diagnostic hypotheses as inference."
   },
   "web-dev": {
     "thinkingLevel": "medium",

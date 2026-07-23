@@ -159,6 +159,7 @@ export default function presetExtension(pi: ExtensionAPI) {
 
 			if (validTools.length > 0) {
 				pi.setActiveTools(validTools);
+				pi.events.emit("preset:tools", { tools: validTools });
 			}
 		}
 
@@ -417,7 +418,14 @@ export default function presetExtension(pi: ExtensionAPI) {
 			if (preset) {
 				activePresetName = presetEntry.data.name;
 				activePreset = preset;
-				// Don't re-apply model/tools on restore, just keep the name for instructions
+				if (preset.tools?.length) {
+					const allToolNames = new Set(pi.getAllTools().map((tool) => tool.name));
+					const validTools = preset.tools.filter((tool) => allToolNames.has(tool));
+					if (validTools.length) {
+						pi.setActiveTools(validTools);
+						pi.events.emit("preset:tools", { tools: validTools });
+					}
+				}
 			}
 		}
 
