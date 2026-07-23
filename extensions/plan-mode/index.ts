@@ -6,7 +6,11 @@
 
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+	compact,
+	type ExtensionAPI,
+	type ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { Key } from "@earendil-works/pi-tui";
 
 const STATE_TYPE = "plan-mode";
@@ -24,13 +28,21 @@ const PLAN_INSTRUCTIONS = `
 
 [PLAN MODE]
 Investigate the request without changing repository or system state. Use only the available read-only tools. Ask the user when a decision is required. When the investigation is complete, provide the implementation plan as numbered steps under an exact \`Plan:\` heading. Do not implement the plan.`;
+const EXECUTION_INSTRUCTIONS = `
+
+[PLAN EXECUTION]
+Plan mode is inactive. Ignore earlier plan-mode instructions that prohibited implementation. Implement the approved plan with the active tools, make the requested changes, and run appropriate checks.`;
+const EXECUTION_COMPACTION_INSTRUCTIONS = `Preserve the complete approved plan and all context needed to continue executing it. Clearly distinguish completed work from remaining plan steps; retain changes made, checks run and their results, relevant files and symbols, decisions, blockers, and unresolved questions. Explicitly instruct the continuing agent that plan mode is inactive and it must resume implementation from the first incomplete step rather than return to planning.`;
 
 const CHOICE_EXECUTE = "Execute plan";
+const CHOICE_EXECUTE_CLEAR = "Execute plan (clear planning context)";
 const CHOICE_STAY = "Stay in plan mode";
 const CHOICE_EXIT = "Exit plan mode";
+const CLEAR_EXECUTION_COMMAND = "plan-execute-clear";
 
 interface PlanModeState {
 	enabled: boolean;
+	executing?: boolean;
 	toolsBeforePlanMode?: string[];
 }
 
@@ -47,6 +59,8 @@ function getTextContent(message: AssistantMessage): string {
 
 export default function planModeExtension(pi: ExtensionAPI): void {
 	let enabled = false;
+	let executing = false;
+	let pendingClearPlan: string | undefined;
 	let toolsBeforePlanMode: string[] | undefined;
 
 	pi.registerFlag("plan", {
@@ -62,6 +76,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	function persistState(): void {
 		pi.appendEntry<PlanModeState>(STATE_TYPE, {
 			enabled,
+			executing,
 			toolsBeforePlanMode,
 		});
 	}
@@ -94,6 +109,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 	function enablePlanMode(ctx: ExtensionContext): void {
 		enabled = true;
+		executing = false;
 		activateReadOnlyTools();
 		persistState();
 		updateStatus(ctx);
@@ -118,18 +134,58 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		}
 	}
 
+	function executionPrompt(plan: string): string {
+		return `Plan mode is now inactive. Implement the approved plan below. Work through the complete plan naturally, make the requested changes, and run appropriate checks. Do not stop after an arbitrary individual step unless a user decision is required.\n\n${plan}`;
+	}
+
 	async function executePlan(plan: string, ctx: ExtensionContext): Promise<void> {
 		disablePlanMode(ctx, false);
+		executing = true;
+		persistState();
 		ctx.ui.notify("Plan approved. Starting implementation.", "info");
-		pi.sendUserMessage(
-			`Implement the approved plan below. Work through the complete plan naturally, make the requested changes, and run appropriate checks. Do not stop after an arbitrary individual step unless a user decision is required.\n\n${plan}`,
-			{ deliverAs: "followUp" },
-		);
+		pi.sendUserMessage(executionPrompt(plan), { deliverAs: "followUp" });
+	}
+
+	async function executePlanWithClearContext(plan: string, ctx: ExtensionContext): Promise<void> {
+		disablePlanMode(ctx, false);
+		pendingClearPlan = plan;
+		ctx.ui.notify("Plan approved. Starting implementation in a fresh session.", "info");
+		pi.sendUserMessage(`/${CLEAR_EXECUTION_COMMAND}`, { deliverAs: "followUp" });
 	}
 
 	pi.registerCommand("plan", {
 		description: "Toggle read-only plan mode",
 		handler: async (_args, ctx) => togglePlanMode(ctx),
+	});
+
+	pi.registerCommand(CLEAR_EXECUTION_COMMAND, {
+		description: "Execute the approved plan in a fresh session",
+		handler: async (_args, ctx) => {
+			const plan = pendingClearPlan;
+			pendingClearPlan = undefined;
+			if (!plan) {
+				ctx.ui.notify("No approved plan is queued for execution.", "warning");
+				return;
+			}
+
+			await ctx.waitForIdle();
+			const result = await ctx.newSession({
+				parentSession: ctx.sessionManager.getSessionFile(),
+				setup: async (sessionManager) => {
+					sessionManager.appendCustomEntry(STATE_TYPE, {
+						enabled: false,
+						executing: true,
+					} satisfies PlanModeState);
+				},
+				withSession: async (newCtx) => {
+					await newCtx.sendUserMessage(executionPrompt(plan));
+				},
+			});
+
+			if (result.cancelled) {
+				ctx.ui.notify("Fresh-session plan execution was cancelled.", "warning");
+			}
+		},
 	});
 
 	for (const key of [Key.shift("tab"), Key.ctrlAlt("p")]) {
@@ -140,13 +196,43 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	}
 
 	pi.on("before_agent_start", async (event) => {
-		if (!enabled) {
+		if (enabled) {
+			// Reapply after presets or dynamically loaded tools change the active set.
+			activateReadOnlyTools();
+			return { systemPrompt: `${event.systemPrompt}${PLAN_INSTRUCTIONS}` };
+		}
+
+		if (executing) {
+			return { systemPrompt: `${event.systemPrompt}${EXECUTION_INSTRUCTIONS}` };
+		}
+	});
+
+	pi.on("session_before_compact", async (event, ctx) => {
+		if (!executing || !ctx.model) {
 			return;
 		}
 
-		// Reapply after presets or dynamically loaded tools change the active set.
-		activateReadOnlyTools();
-		return { systemPrompt: `${event.systemPrompt}${PLAN_INSTRUCTIONS}` };
+		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+		if (!auth.ok) {
+			ctx.ui.notify(`Could not preserve plan context during compaction: ${auth.error}`, "warning");
+			return;
+		}
+
+		const instructions = [event.customInstructions, EXECUTION_COMPACTION_INSTRUCTIONS]
+			.filter((instruction): instruction is string => Boolean(instruction?.trim()))
+			.join("\n\n");
+		const compaction = await compact(
+			event.preparation,
+			ctx.model,
+			auth.apiKey,
+			auth.headers,
+			instructions,
+			event.signal,
+			pi.getThinkingLevel(),
+			undefined,
+			auth.env,
+		);
+		return { compaction };
 	});
 
 	pi.on("agent_end", async (event, ctx) => {
@@ -166,18 +252,28 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 
 		const choice = await ctx.ui.select("Plan ready — what next?", [
 			CHOICE_EXECUTE,
+			CHOICE_EXECUTE_CLEAR,
 			CHOICE_STAY,
 			CHOICE_EXIT,
 		]);
 
 		if (choice === CHOICE_EXECUTE) {
 			await executePlan(plan, ctx);
+		} else if (choice === CHOICE_EXECUTE_CLEAR) {
+			await executePlanWithClearContext(plan, ctx);
 		} else if (choice === CHOICE_EXIT) {
 			disablePlanMode(ctx);
 		}
 	});
 
-	pi.on("session_start", async (_event, ctx) => {
+	pi.on("agent_settled", async () => {
+		if (executing && !enabled) {
+			executing = false;
+			persistState();
+		}
+	});
+
+	pi.on("session_start", async (event, ctx) => {
 		const savedState = ctx.sessionManager
 			.getBranch()
 			.filter(
@@ -185,8 +281,15 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 			)
 			.pop()?.data as PlanModeState | undefined;
 
-		enabled = pi.getFlag("plan") === true || savedState?.enabled === true;
+		executing = savedState?.executing === true;
+		enabled = !executing && (
+			savedState?.enabled === true ||
+			(event.reason === "startup" && pi.getFlag("plan") === true)
+		);
 		toolsBeforePlanMode = savedState?.toolsBeforePlanMode;
+		if (enabled) {
+			activateReadOnlyTools();
+		}
 		updateStatus(ctx);
 	});
 }
