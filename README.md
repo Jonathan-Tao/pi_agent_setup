@@ -66,7 +66,7 @@ Additional workflow features:
 - `bg_start`, `bg_status`, `bg_list`, and `bg_kill` manage session-scoped background commands. `/ps` opens the terminal viewer; all running commands are stopped on session shutdown or reload.
 - `/btw <question>` runs a read-only one-off question through an isolated Pi process using the current model. Its result is displayed without entering the main model context.
 - `/copy-all` copies user and assistant messages from the active branch to the clipboard.
-- The dashboard footer retains the normal directory, model, reasoning, context, Git branch, and extension-status information while adding session cost and changed-file count.
+- The dashboard footer retains the normal directory, model, reasoning, context, Git branch, and extension-status information while adding session cost, generation speed, changed-file count, and active PR status.
 
 The background-terminal, file-search, and copy-all extensions were adapted from [Ben Davis's public Pi setup](https://github.com/davis7dotsh/my-pi-setup).
 

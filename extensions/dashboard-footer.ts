@@ -39,21 +39,60 @@ function columns(left: string, right: string, width: number) {
 export default function dashboardFooter(pi: ExtensionAPI) {
 	let changedFiles = 0;
 	let inRepository = false;
+	let pullRequest: { number: number; isDraft: boolean } | undefined;
+	let queriedBranch: string | undefined;
+	let tokensPerSecond: number | undefined;
+	let streamStartedAt: number | undefined;
+	let lastStreamDeltaAt: number | undefined;
+	let streamedCharacters = 0;
+	let lastLiveRender = 0;
 	let requestRender: (() => void) | undefined;
 	let refreshGeneration = 0;
 
 	async function refreshGit(ctx: ExtensionContext) {
 		if (ctx.mode !== "tui") return;
 		const generation = ++refreshGeneration;
-		const result = await pi.exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
-			cwd: ctx.cwd,
-			timeout: 3_000,
-		});
+		const [status, branchResult] = await Promise.all([
+			pi.exec("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+				cwd: ctx.cwd,
+				timeout: 3_000,
+			}),
+			pi.exec("git", ["branch", "--show-current"], { cwd: ctx.cwd, timeout: 3_000 }),
+		]);
 		if (generation !== refreshGeneration) return;
-		inRepository = result.code === 0;
+		inRepository = status.code === 0;
 		changedFiles = inRepository
-			? result.stdout.split("\n").filter((line) => line.length > 0).length
+			? status.stdout.split("\n").filter((line) => line.length > 0).length
 			: 0;
+
+		const branch = inRepository ? branchResult.stdout.trim() : "";
+		if (!branch) {
+			queriedBranch = undefined;
+			pullRequest = undefined;
+		} else if (branch !== queriedBranch) {
+			pullRequest = undefined;
+			const pr = await pi.exec(
+				"gh",
+				["pr", "view", branch, "--json", "number,state,isDraft"],
+				{ cwd: ctx.cwd, timeout: 5_000 },
+			);
+			if (generation !== refreshGeneration) return;
+			queriedBranch = branch;
+			if (pr.code === 0) {
+				try {
+					const parsed = JSON.parse(pr.stdout) as {
+						number?: unknown;
+						state?: unknown;
+						isDraft?: unknown;
+					};
+					if (typeof parsed.number === "number" && parsed.state === "OPEN") {
+						pullRequest = { number: parsed.number, isDraft: parsed.isDraft === true };
+					}
+				} catch {
+					// Invalid or unavailable GitHub data simply omits the PR indicator.
+				}
+			}
+		}
 		requestRender?.();
 	}
 
@@ -81,13 +120,15 @@ export default function dashboardFooter(pi: ExtensionAPI) {
 						? `${ctx.model.provider}/${ctx.model.id} · ${pi.getThinkingLevel()}`
 						: "no model";
 					const branch = footerData.getGitBranch();
-					const git = inRepository
-						? `${branch ?? "detached"} · ${changedFiles} changed`
-						: "";
+					let git = inRepository ? `${branch ?? "detached"} · ${changedFiles} changed` : "";
+					if (pullRequest) {
+						git += ` · ${pullRequest.isDraft ? "draft " : ""}PR #${pullRequest.number}`;
+					}
+					const speed = tokensPerSecond === undefined ? "— tok/s" : `${Math.round(tokensPerSecond)} tok/s`;
 					const lines = [
 						columns(theme.fg("text", compactPath(ctx.cwd)), theme.fg("muted", model), width),
 						columns(
-							theme.fg("muted", `${context} · $${sessionCost(ctx).toFixed(2)}`),
+							theme.fg("muted", `${context} · $${sessionCost(ctx).toFixed(2)} · ${speed}`),
 							theme.fg("muted", git),
 							width,
 						),
@@ -106,7 +147,40 @@ export default function dashboardFooter(pi: ExtensionAPI) {
 		return { action: "continue" };
 	});
 	pi.on("tool_execution_end", (_event, ctx) => void refreshGit(ctx));
-	pi.on("message_end", (_event, _ctx) => requestRender?.());
+	pi.on("message_start", (event) => {
+		if (event.message.role !== "assistant") return;
+		streamStartedAt = undefined;
+		lastStreamDeltaAt = undefined;
+		streamedCharacters = 0;
+	});
+	pi.on("message_update", (event) => {
+		if (event.message.role !== "assistant") return;
+		const update = event.assistantMessageEvent;
+		if (update.type !== "text_delta" && update.type !== "thinking_delta") return;
+		if (!update.delta) return;
+		const now = Date.now();
+		streamStartedAt ??= now;
+		lastStreamDeltaAt = now;
+		streamedCharacters += update.delta.length;
+		const elapsed = now - streamStartedAt;
+		if (elapsed > 50) tokensPerSecond = streamedCharacters / 4 / (elapsed / 1_000);
+		if (now - lastLiveRender >= 200) {
+			lastLiveRender = now;
+			requestRender?.();
+		}
+	});
+	pi.on("message_end", (event) => {
+		if (
+			event.message.role === "assistant" &&
+			streamStartedAt !== undefined &&
+			lastStreamDeltaAt !== undefined &&
+			lastStreamDeltaAt - streamStartedAt >= 50 &&
+			event.message.usage.output > 0
+		) {
+			tokensPerSecond = event.message.usage.output / ((lastStreamDeltaAt - streamStartedAt) / 1_000);
+		}
+		requestRender?.();
+	});
 
 	pi.on("session_shutdown", (_event, ctx) => {
 		refreshGeneration += 1;
