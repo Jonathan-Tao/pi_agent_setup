@@ -7,7 +7,7 @@ export const FD_PROMPT_SNIPPET =
   "Find files and directories by name with fd (fast, gitignore-aware).";
 
 export const FD_PROMPT_GUIDELINES = [
-  "Use fd as the primary tool for discovering files and directories by name, extension, or glob instead of bash with find or ls -R.",
+  "Prefer fd over the built-in find tool for routine file and directory discovery by name, extension, type, depth, or glob.",
   "Use rg instead of fd when searching file contents rather than file names.",
   "Keep using bash for complex multi-step workflows that pipe or post-process file listings.",
 ];
@@ -31,7 +31,7 @@ export const RG_PROMPT_SNIPPET =
   "Search file contents with ripgrep (fast regex content search).";
 
 export const RG_PROMPT_GUIDELINES = [
-  "Use rg as the primary tool for searching file contents instead of bash with grep.",
+  "Prefer rg over the built-in grep tool for routine file-content searches.",
   "Use fd instead of rg when looking for files by name rather than content.",
   "Set fixed_strings on rg when searching for literal code snippets containing regex metacharacters.",
   "Keep using bash for complex multi-step workflows that combine searching with other commands.",
