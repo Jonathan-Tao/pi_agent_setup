@@ -422,7 +422,8 @@ export default function sudoExtension(pi: ExtensionAPI) {
 					cwd: ctx.cwd,
 					stdio: ["ignore", "pipe", "pipe"],
 					env: process.env,
-					detached: process.platform !== "win32",
+					// Keep sudo in Pi's session so its cached credential timestamp remains valid.
+					detached: false,
 				});
 
 				let output = "";
