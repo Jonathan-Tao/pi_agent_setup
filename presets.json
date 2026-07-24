@@ -1,32 +1,32 @@
 {
   "plan": {
     "thinkingLevel": "high",
-    "tools": ["read", "bash", "grep", "find", "ls", "subagent", "question", "google_search", "pdf"],
+    "tools": ["read", "bash", "grep", "find", "ls", "fd", "rg", "subagent", "question", "google_search", "pdf"],
     "instructions": "PLAN: read-only investigation. Gather enough evidence for an implementation plan using read-only shell/Git commands, searches, documentation, questions, and read-only subagent reconnaissance as needed. Do not edit files or change repository/system state. Output numbered steps under a Plan: header. Prefer /plan for the full workflow when available."
   },
   "implement": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "subagent", "question", "sudo", "google_search"],
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "fd", "rg", "bg_start", "bg_status", "bg_list", "bg_kill", "subagent", "question", "sudo", "google_search"],
     "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful."
   },
   "IEM-Firmware": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "cubemx", "hardware", "subagent", "question", "sudo", "google_search"],
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "fd", "rg", "bg_start", "bg_status", "bg_list", "bg_kill", "cubemx", "hardware", "subagent", "question", "sudo", "google_search"],
     "instructions": "IMPLEMENT: focused changes only. Read before edit. Track multi-step work explicitly. Use fast/agent subagents if helpful."
   },
   "web-dev": {
     "thinkingLevel": "medium",
-    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "browser", "google_search", "subagent", "question", "sudo"],
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "fd", "rg", "bg_start", "bg_status", "bg_list", "bg_kill", "browser", "google_search", "subagent", "question", "sudo"],
     "instructions": "WEB DEV: make focused changes and verify them in the browser. Read before editing. Start or locate the development server, use browser snapshots for interaction and screenshots for visual checks, inspect console errors, and report what was tested."
   },
   "review": {
     "thinkingLevel": "high",
-    "tools": ["read", "bash", "grep", "find", "ls", "question", "google_search"],
+    "tools": ["read", "bash", "grep", "find", "ls", "fd", "rg", "question", "google_search"],
     "instructions": "REVIEW: no edits. Critical / Warnings / Suggestions with file:line."
   },
   "ask": {
     "thinkingLevel": "low",
-    "tools": ["read", "grep", "find", "ls", "bash", "question", "google_search"],
+    "tools": ["read", "grep", "find", "ls", "fd", "rg", "bash", "question", "google_search"],
     "instructions": "ASK: answer/explore. No edits unless asked. Use question if you need clarification."
   }
 }

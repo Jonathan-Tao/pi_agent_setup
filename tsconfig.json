@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["node"],
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "extensions/background-terminals/**/*.ts",
+    "extensions/by-the-way.ts",
+    "extensions/copy-all/**/*.ts",
+    "extensions/dashboard-footer.ts",
+    "extensions/file-search/**/*.ts"
+  ]
+}

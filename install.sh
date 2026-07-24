@@ -41,6 +41,14 @@ if [ -f "$hardware_extension/package.json" ]; then
     (cd "$hardware_extension" && npm install --omit=dev)
 fi
 
+for extension in background-terminals file-search; do
+    extension_dir="$repo/extensions/$extension"
+    if [ -f "$extension_dir/package.json" ]; then
+        printf 'Installing %s extension dependencies...\n' "$extension"
+        (cd "$extension_dir" && npm ci --omit=dev --ignore-scripts)
+    fi
+done
+
 printf 'Pi configuration linked from %s\n' "$repo"
 if [ -d "$backup" ]; then
     printf 'Previous files backed up to %s\n' "$backup"
