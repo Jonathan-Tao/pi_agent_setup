@@ -65,6 +65,7 @@ Additional workflow features:
 - `fd` and `rg` provide fast, bounded, `.gitignore`-aware file and content search. The installer installs their extension dependencies; install the system binaries with the host package manager when needed.
 - `bg_start`, `bg_status`, `bg_list`, and `bg_kill` manage session-scoped background commands. `/ps` opens the terminal viewer; all running commands are stopped on session shutdown or reload.
 - `/btw <question>` runs a read-only one-off question through an isolated Pi process using the current model. Its result is displayed without entering the main model context.
+- `/continue on` enables reviewer-gated autonomous work. After each settled run, the cheap user-scoped `fast` agent independently checks the active session goals and chooses to stop, wait for user input, or send one concrete continuation. It stops automatically after 12 continuations as a safety bound; `/continue off` disables it sooner.
 - `/copy-all` copies user and assistant messages from the active branch to the clipboard.
 - The dashboard footer retains the normal directory, model, reasoning, context, Git branch, and extension-status information while adding session cost, generation speed, changed-file count, and active PR status.
 

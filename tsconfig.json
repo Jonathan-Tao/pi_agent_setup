@@ -11,6 +11,8 @@
     "verbatimModuleSyntax": true
   },
   "include": [
+    "extensions/auto-continue.ts",
+    "tests/auto-continue.test.ts",
     "extensions/background-terminals/**/*.ts",
     "extensions/by-the-way.ts",
     "extensions/copy-all/**/*.ts",
