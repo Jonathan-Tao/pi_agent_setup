@@ -195,19 +195,27 @@ export function cubeScript(iocPath: string, generate = false): string {
   return `${lines.join("\n")}\n`;
 }
 
-function commandOkay(result: CommandResult, expectedOk: number): boolean {
-  const statuses = `${result.stdout}\n${result.stderr}`.split(/\r?\n/).map((line) => line.trim());
-  const oks = statuses.filter((line) => line === "OK").length;
-  return result.code === 0 && !result.killed && oks >= expectedOk && !statuses.includes("KO");
+function errorDiagnostics(result: CommandResult): string[] {
+  return `${result.stdout}\n${result.stderr}`
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /\[ERROR\]/.test(line));
 }
 
-export async function runCubeMx(executablePath: string, script: string, exec: Exec, signal?: AbortSignal, timeout = 120_000): Promise<CommandResult & { ok: boolean; script: string }> {
+function commandOkay(result: CommandResult, expectedOk: number, errors: string[]): boolean {
+  const statuses = `${result.stdout}\n${result.stderr}`.split(/\r?\n/).map((line) => line.trim());
+  const oks = statuses.filter((line) => line === "OK").length;
+  return result.code === 0 && !result.killed && errors.length === 0 && oks >= expectedOk && !statuses.includes("KO");
+}
+
+export async function runCubeMx(executablePath: string, script: string, exec: Exec, signal?: AbortSignal, timeout = 120_000): Promise<CommandResult & { ok: boolean; script: string; errors: string[] }> {
   const directory = await mkdtemp(join(tmpdir(), "pi-cubemx-script-"));
   const scriptPath = join(directory, "commands.script");
   await writeFile(scriptPath, script, "utf8");
   try {
     const result = await exec(executablePath, ["-q", scriptPath], { signal, timeout });
-    return { ...result, ok: commandOkay(result, script.includes("project generate") ? 2 : 1), script };
+    const errors = errorDiagnostics(result);
+    return { ...result, ok: commandOkay(result, script.includes("project generate") ? 2 : 1, errors), script, errors };
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -338,7 +346,7 @@ async function restoreSnapshot(snapshot: string, target: string): Promise<void> 
   }
 }
 
-export async function generateIsolated(iocPath: string, executablePath: string, exec: Exec, options: { preview: boolean; signal?: AbortSignal; timeout?: number }): Promise<{ result: CommandResult & { ok: boolean; script: string }; changes: FileChange[] }> {
+export async function generateIsolated(iocPath: string, executablePath: string, exec: Exec, options: { preview: boolean; signal?: AbortSignal; timeout?: number }): Promise<{ result: CommandResult & { ok: boolean; script: string; errors: string[] }; changes: FileChange[] }> {
   const projectRoot = dirname(iocPath);
   await ensureNoSymlinks(projectRoot);
   const temp = await mkdtemp(join(tmpdir(), "pi-cubemx-project-"));
@@ -350,7 +358,10 @@ export async function generateIsolated(iocPath: string, executablePath: string, 
     const previewIoc = join(previewRoot, relative(projectRoot, iocPath));
     try {
       const result = await runCubeMx(executablePath, cubeScript(previewIoc, true), exec, options.signal, options.timeout ?? 300_000);
-      if (!result.ok) throw Object.assign(new Error("CubeMX generation failed"), { cubeResult: result });
+      if (!result.ok) {
+        const diagnostics = result.errors.length ? `:\n${result.errors.join("\n")}` : "";
+        throw Object.assign(new Error(`CubeMX generation failed${diagnostics}`), { cubeResult: result });
+      }
       await ensureUserRegions(snapshot, previewRoot);
       return { result, changes: await compareTrees(snapshot, previewRoot) };
     } finally {
@@ -359,7 +370,10 @@ export async function generateIsolated(iocPath: string, executablePath: string, 
   }
   try {
     const result = await runCubeMx(executablePath, cubeScript(iocPath, true), exec, options.signal, options.timeout ?? 300_000);
-    if (!result.ok) throw Object.assign(new Error("CubeMX generation failed; project restored"), { cubeResult: result });
+    if (!result.ok) {
+      const diagnostics = result.errors.length ? `:\n${result.errors.join("\n")}` : "";
+      throw Object.assign(new Error(`CubeMX generation failed; project restored${diagnostics}`), { cubeResult: result });
+    }
     const changes = await compareTrees(snapshot, projectRoot);
     for (const change of changes.filter((item) => item.status !== "created" && preservePath(item.path))) {
       const destination = join(projectRoot, change.path);

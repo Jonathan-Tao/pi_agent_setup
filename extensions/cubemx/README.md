@@ -20,8 +20,8 @@ The CLI adapter uses the long-supported quiet script interface (`-q script`) and
 - `inspect`: summarize MCU/package, versions, peripherals and their configuration, pins/labels, clock properties, DMA, NVIC, memory/MPU, and project settings.
 - `query`: retrieve any exact raw property keys or key prefix. This is the detailed interface for every CubeMX setting, including complete pin, clock-tree, peripheral, DMA, NVIC, and memory configuration.
 - `patch`: set or remove exact raw properties. It previews by default and preserves all unrelated bytes, comments, escaping, ordering, unknown fields, and line endings. Repeat with `apply: true` to write.
-- `validate`: ask CubeMX to load the exact `.ioc` without generation. A process exit code alone is not accepted; the CLI must report `OK` and not `KO`.
-- `generate`: require validation of the unchanged file, then run in an isolated project copy by default. Repeat with `preview: false` to apply to the project.
+- `validate`: ask CubeMX to load the exact `.ioc` without generation. A process exit code alone is not accepted; the CLI must report `OK`, not report `KO`, and emit no error-level diagnostics.
+- `generate`: require validation of the unchanged file, then run in an isolated project copy by default. Generation fails on CubeMX error-level diagnostics even when the CLI exits successfully and reports `OK`. Repeat with `preview: false` to apply to the project.
 
 ## Required workflow
 

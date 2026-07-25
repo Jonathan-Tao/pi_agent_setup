@@ -65,6 +65,13 @@ test("CLI script quotes portable paths and validation requires explicit OK", asy
   assert.equal(bad.ok, false);
   const windowsBad = await runCubeMx("fake", cubeScript("C:\\tmp\\a.ioc"), async () => ({ stdout: "OK\r\nKO\r\n", stderr: "", code: 0 }));
   assert.equal(windowsBad.ok, false);
+  const loggedError = await runCubeMx("fake", cubeScript("/tmp/a.ioc", true), async () => ({
+    stdout: "OK\n2026-07-25 18:00:58 [ERROR] CodeEngine:255 - [Ljava.lang.StackTraceElement;@49f6b8a7\nOK\nBye bye",
+    stderr: "",
+    code: 0,
+  }));
+  assert.equal(loggedError.ok, false);
+  assert.deepEqual(loggedError.errors, ["2026-07-25 18:00:58 [ERROR] CodeEngine:255 - [Ljava.lang.StackTraceElement;@49f6b8a7"]);
 });
 
 test("preview generation is isolated and reports changes", async () => {
@@ -115,6 +122,21 @@ test("applied generation restores changed repository metadata", async () => {
     }, { preview: false });
     assert.equal(await readFile(join(project, "BUILD"), "utf8"), "keep\n");
     assert.deepEqual(generated.changes, [{ path: "generated.c", status: "created" }]);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("generation rejects CubeMX error diagnostics despite OK statuses", async () => {
+  const root = await temporary();
+  const project = join(root, "project");
+  await mkdir(project);
+  const ioc = join(project, "demo.ioc");
+  await writeFile(ioc, "A=1\n");
+  try {
+    await assert.rejects(() => generateIsolated(ioc, "fake", async () => ({
+      stdout: "OK\n[ERROR] CodeEngine:255 - broken generation\nOK\n",
+      stderr: "",
+      code: 0,
+    }), { preview: true }), /CodeEngine:255 - broken generation/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
