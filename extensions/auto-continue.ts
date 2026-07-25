@@ -119,6 +119,7 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 	let continuations = 0;
 	let lastRunErrored = false;
 	let reviewer: ChildProcess | undefined;
+	let settledAssessment: NodeJS.Immediate | undefined;
 
 	function updateStatus(ctx: ExtensionContext): void {
 		const status = checking ? "continue: checking…" : enabled ? "continue: on" : undefined;
@@ -312,15 +313,24 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		lastRunErrored = endedWithError(event.messages);
 	});
 
-	pi.on("agent_settled", async (_event, ctx) => {
+	pi.on("agent_settled", (_event, ctx) => {
 		if (!enabled || lastRunErrored) return;
-		await assessAndMaybeContinue(ctx);
+		if (settledAssessment) clearImmediate(settledAssessment);
+		// Let every other agent_settled handler run first. In particular,
+		// background terminals flush deferred completion messages from their
+		// settled handler; assessing synchronously here could race that flush.
+		settledAssessment = setImmediate(() => {
+			settledAssessment = undefined;
+			void assessAndMaybeContinue(ctx);
+		});
 	});
 
 	pi.on("session_shutdown", () => {
 		enabled = false;
 		checking = false;
 		lastRunErrored = false;
+		if (settledAssessment) clearImmediate(settledAssessment);
+		settledAssessment = undefined;
 		reviewer?.kill("SIGTERM");
 		reviewer = undefined;
 	});
