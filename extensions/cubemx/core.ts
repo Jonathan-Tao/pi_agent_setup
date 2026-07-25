@@ -199,7 +199,10 @@ function errorDiagnostics(result: CommandResult): string[] {
   return `${result.stdout}\n${result.stderr}`
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => /\[ERROR\]/.test(line));
+    .filter((line) => /\[ERROR\]/.test(line))
+    // CubeMX logs IOException.getStackTrace() as an array identity when optional
+    // templates cannot be copied, then successfully generates the target file.
+    .filter((line) => !/\[ERROR\]\s+CodeEngine:255\s+-\s+\[Ljava\.lang\.StackTraceElement;@[0-9a-f]+$/i.test(line));
 }
 
 function commandOkay(result: CommandResult, expectedOk: number, errors: string[]): boolean {
@@ -243,18 +246,30 @@ export function cubeVersionFromDatabase(database?: string): string | undefined {
   return digits ? `6.${Number(digits.slice(0, 2))}.${Number(digits.slice(2))}` : undefined;
 }
 
-export async function versionWarnings(document: IocDocument, executablePath: string): Promise<string[]> {
+async function retainedDatabaseAvailable(version: string, env: NodeJS.ProcessEnv): Promise<boolean> {
+  const home = env.HOME ?? env.USERPROFILE;
+  if (!home) return false;
+  try {
+    const xml = await readFile(join(home, ".stm32cubemx", "databases", version, "db", "package.xml"), "utf8");
+    return xml.match(/Release="([^"]+)"/)?.[1] === version;
+  } catch {
+    return false;
+  }
+}
+
+export async function versionWarnings(document: IocDocument, executablePath: string, env: NodeJS.ProcessEnv = process.env): Promise<string[]> {
   const warnings: string[] = [];
   const projectDb = exactProperty(document, "MxDb.Version");
   const projectCube = exactProperty(document, "MxCube.Version");
   const installedDb = await installedDatabaseVersion(executablePath);
   const installedCube = cubeVersionFromDatabase(installedDb);
-  if (installedDb && projectDb && installedDb !== projectDb) warnings.push(`Database mismatch: project ${projectDb}, installed ${installedDb}`);
-  if (installedCube && projectCube && installedCube !== projectCube) warnings.push(`CubeMX mismatch: project ${projectCube}, installed ${installedCube}`);
+  const projectDbAvailable = projectDb !== undefined && (installedDb === projectDb || await retainedDatabaseAvailable(projectDb, env));
+  if (installedDb && projectDb && installedDb !== projectDb && !projectDbAvailable) warnings.push(`Database mismatch: project ${projectDb}, installed ${installedDb}`);
+  if (installedCube && projectCube && installedCube !== projectCube && !projectDbAvailable) warnings.push(`CubeMX mismatch: project ${projectCube}, installed ${installedCube}`);
   const firmware = exactProperty(document, "ProjectManager.FirmwarePackage");
   if (firmware) {
     const folder = firmware.replace("STM32Cube FW_", "STM32Cube_FW_").replace(/ V(?=\d)/, "_V");
-    const repository = process.env.STM32CUBE_REPOSITORY ?? join(process.env.HOME ?? "", "STM32Cube", "Repository");
+    const repository = env.STM32CUBE_REPOSITORY ?? join(env.HOME ?? env.USERPROFILE ?? "", "STM32Cube", "Repository");
     try { await access(join(repository, folder)); } catch { warnings.push(`Firmware package not found: ${join(repository, folder)}`); }
   }
   return warnings;

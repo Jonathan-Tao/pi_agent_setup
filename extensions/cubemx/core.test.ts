@@ -4,7 +4,7 @@ import { chmod, mkdtemp, readFile, rm, writeFile, mkdir, symlink } from "node:fs
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { parseIoc, patchIoc, serializeIoc } from "./ioc.ts";
-import { containedPath, cubeScript, discoverExecutable, discoverIocFiles, generateIsolated, queryIoc, runCubeMx } from "./core.ts";
+import { containedPath, cubeScript, discoverExecutable, discoverIocFiles, generateIsolated, queryIoc, runCubeMx, versionWarnings } from "./core.ts";
 
 async function temporary(): Promise<string> {
   return mkdtemp(join(tmpdir(), "cubemx-test-"));
@@ -70,8 +70,35 @@ test("CLI script quotes portable paths and validation requires explicit OK", asy
     stderr: "",
     code: 0,
   }));
-  assert.equal(loggedError.ok, false);
-  assert.deepEqual(loggedError.errors, ["2026-07-25 18:00:58 [ERROR] CodeEngine:255 - [Ljava.lang.StackTraceElement;@49f6b8a7"]);
+  assert.equal(loggedError.ok, true);
+  assert.deepEqual(loggedError.errors, []);
+  const realLoggedError = await runCubeMx("fake", cubeScript("/tmp/a.ioc", true), async () => ({
+    stdout: "OK\n[ERROR] CodeGenerator:123 - generation failed\nOK\n",
+    stderr: "",
+    code: 0,
+  }));
+  assert.equal(realLoggedError.ok, false);
+  assert.deepEqual(realLoggedError.errors, ["[ERROR] CodeGenerator:123 - generation failed"]);
+});
+
+test("retained project databases are compatible without migration", async () => {
+  const root = await temporary();
+  const installation = join(root, "installation");
+  const home = join(root, "home");
+  const executable = join(installation, "STM32CubeMX");
+  await mkdir(join(installation, "db"), { recursive: true });
+  await mkdir(join(home, ".stm32cubemx", "databases", "DB.6.0.161", "db"), { recursive: true });
+  await writeFile(executable, "");
+  await writeFile(join(installation, "db", "package.xml"), '<PackDescription Release="DB.6.0.180"/>');
+  await writeFile(join(home, ".stm32cubemx", "databases", "DB.6.0.161", "db", "package.xml"), '<PackDescription Release="DB.6.0.161"/>');
+  const document = parseIoc("MxDb.Version=DB.6.0.161\nMxCube.Version=6.16.1\n");
+  try {
+    assert.deepEqual(await versionWarnings(document, executable, { HOME: home }), []);
+    assert.deepEqual(await versionWarnings(document, executable, { HOME: join(root, "other-home") }), [
+      "Database mismatch: project DB.6.0.161, installed DB.6.0.180",
+      "CubeMX mismatch: project 6.16.1, installed 6.18.0",
+    ]);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("preview generation is isolated and reports changes", async () => {

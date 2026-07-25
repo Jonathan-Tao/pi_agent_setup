@@ -12,7 +12,7 @@ Install STM32CubeMX from STMicroelectronics. The extension searches, in order:
 
 Set `STM32CUBE_REPOSITORY` if firmware packages are not under `~/STM32Cube/Repository`.
 
-The CLI adapter uses the long-supported quiet script interface (`-q script`) and quoted, absolute, slash-normalized paths. It reads the installed database metadata rather than assuming one CubeMX release. Generation is blocked on a detected CubeMX, database, or firmware-package mismatch unless the caller explicitly acknowledges it.
+The CLI adapter uses the long-supported quiet script interface (`-q script`) and quoted, absolute, slash-normalized paths. It reads the installed database metadata rather than assuming one CubeMX release. Projects kept on an older database are supported when CubeMX has retained that exact database under its user data directory. Generation is blocked on an unavailable project database or firmware-package mismatch unless the caller explicitly acknowledges it.
 
 ## Actions
 
@@ -20,8 +20,8 @@ The CLI adapter uses the long-supported quiet script interface (`-q script`) and
 - `inspect`: summarize MCU/package, versions, peripherals and their configuration, pins/labels, clock properties, DMA, NVIC, memory/MPU, and project settings.
 - `query`: retrieve any exact raw property keys or key prefix. This is the detailed interface for every CubeMX setting, including complete pin, clock-tree, peripheral, DMA, NVIC, and memory configuration.
 - `patch`: set or remove exact raw properties. It previews by default and preserves all unrelated bytes, comments, escaping, ordering, unknown fields, and line endings. Repeat with `apply: true` to write.
-- `validate`: ask CubeMX to load the exact `.ioc` without generation. A process exit code alone is not accepted; the CLI must report `OK`, not report `KO`, and emit no error-level diagnostics.
-- `generate`: require validation of the unchanged file, then run in an isolated project copy by default. Generation fails on CubeMX error-level diagnostics even when the CLI exits successfully and reports `OK`. Repeat with `preview: false` to apply to the project.
+- `validate`: ask CubeMX to load the exact `.ioc` without generation. A process exit code alone is not accepted; the CLI must report `OK`, not report `KO`, and emit no real error-level diagnostics.
+- `generate`: require validation of the unchanged file, then run in an isolated project copy by default. Generation fails on real CubeMX error-level diagnostics even when the CLI exits successfully and reports `OK`. CubeMX's known malformed `CodeEngine:255` optional-template diagnostic is retained in the log but does not fail an otherwise successful run. Repeat with `preview: false` to apply to the project.
 
 ## Required workflow
 
