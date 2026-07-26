@@ -81,20 +81,21 @@ export default function (pi: ExtensionAPI) {
     return managerPromise;
   };
 
-  /** One-line widget directly above the editor, only while ≥1 is running.
+  /** Publish running-count changes and show a widget while ≥1 is running.
    * Called on every manager notification (including per-output-chunk), so it
-   * only touches setWidget when the running count actually changes —
-   * replacing the widget factory hundreds of times a second would churn
-   * component creation for no visible difference. */
+   * only emits or touches setWidget when the count changes — replacing the
+   * widget factory hundreds of times a second would churn component creation
+   * for no visible difference. */
   let widgetRunning = 0;
   const updateWidget = (manager: TerminalManagerShape) => {
+    const running = manager.view
+      .list()
+      .filter((snap) => snap.status === "running").length;
+    if (running === widgetRunning) return;
+    widgetRunning = running;
+    pi.events.emit("background-terminals:running-count", { running });
     if (!ui) return;
     try {
-      const running = manager.view
-        .list()
-        .filter((snap) => snap.status === "running").length;
-      if (running === widgetRunning) return;
-      widgetRunning = running;
       if (running === 0) {
         ui.setWidget(WIDGET_KEY, undefined);
         return;

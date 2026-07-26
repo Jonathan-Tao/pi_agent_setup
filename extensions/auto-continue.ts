@@ -120,9 +120,17 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 	let lastRunErrored = false;
 	let reviewer: ChildProcess | undefined;
 	let settledAssessment: NodeJS.Immediate | undefined;
+	let runningBackgroundTerminals = 0;
+	let sessionContext: ExtensionContext | undefined;
 
 	function updateStatus(ctx: ExtensionContext): void {
-		const status = checking ? "continue: checking…" : enabled ? "continue: on" : undefined;
+		const status = checking
+			? "continue: checking…"
+			: enabled && runningBackgroundTerminals > 0
+				? "continue: waiting for terminal…"
+				: enabled
+					? "continue: on"
+					: undefined;
 		ctx.ui.setStatus("auto-continue", status);
 	}
 
@@ -211,7 +219,14 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 	}
 
 	async function assessAndMaybeContinue(ctx: ExtensionContext): Promise<void> {
-		if (!enabled || checking || ctx.hasPendingMessages() || !ctx.isIdle()) return;
+		if (
+			!enabled ||
+			checking ||
+			runningBackgroundTerminals > 0 ||
+			ctx.hasPendingMessages() ||
+			!ctx.isIdle()
+		)
+			return;
 		const reviewedLeafId = ctx.sessionManager.getLeafId();
 		let recheck = false;
 		checking = true;
@@ -258,7 +273,13 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		} finally {
 			checking = false;
 			updateStatus(ctx);
-			if (recheck && enabled && ctx.isIdle() && !ctx.hasPendingMessages()) {
+			if (
+				recheck &&
+				enabled &&
+				runningBackgroundTerminals === 0 &&
+				ctx.isIdle() &&
+				!ctx.hasPendingMessages()
+			) {
 				queueMicrotask(() => void assessAndMaybeContinue(ctx));
 			}
 		}
@@ -271,11 +292,20 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		return new Text(theme.fg(color, `goal check: ${review.decision}`) + theme.fg("dim", ` — ${review.reason}`), 0, 0);
 	});
 
+	pi.events.on("background-terminals:running-count", (data: unknown) => {
+		const running = (data as { running?: unknown } | undefined)?.running;
+		if (typeof running !== "number" || !Number.isInteger(running) || running < 0) return;
+		runningBackgroundTerminals = running;
+		if (sessionContext) updateStatus(sessionContext);
+	});
+
 	pi.on("session_start", (_event, ctx) => {
 		enabled = false;
 		checking = false;
 		continuations = 0;
 		lastRunErrored = false;
+		runningBackgroundTerminals = 0;
+		sessionContext = ctx;
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type === "custom" && entry.customType === STATE_TYPE) {
 				enabled = (entry.data as { enabled?: boolean } | undefined)?.enabled === true;
@@ -329,6 +359,8 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		enabled = false;
 		checking = false;
 		lastRunErrored = false;
+		runningBackgroundTerminals = 0;
+		sessionContext = undefined;
 		if (settledAssessment) clearImmediate(settledAssessment);
 		settledAssessment = undefined;
 		reviewer?.kill("SIGTERM");

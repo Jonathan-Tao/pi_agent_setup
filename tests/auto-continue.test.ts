@@ -26,11 +26,17 @@ test("rejects malformed reviewer output", () => {
 	assert.throws(() => parseGoalReview('{"decision":"maybe","reason":"unclear"}'), /unknown decision/);
 });
 
-test("defers goal assessment until other settled handlers can queue messages", async () => {
+test("waits for background terminals and defers assessment past settled handlers", async () => {
 	const handlers = new Map<string, Array<(event: unknown, ctx: any) => unknown>>();
+	const eventHandlers = new Map<string, Array<(data: unknown) => unknown>>();
 	const pi = {
 		on(name: string, handler: (event: unknown, ctx: any) => unknown) {
 			handlers.set(name, [...(handlers.get(name) ?? []), handler]);
+		},
+		events: {
+			on(name: string, handler: (data: unknown) => unknown) {
+				eventHandlers.set(name, [...(eventHandlers.get(name) ?? []), handler]);
+			},
 		},
 		appendEntry() {},
 		registerEntryRenderer() {},
@@ -60,6 +66,12 @@ test("defers goal assessment until other settled handlers can queue messages", a
 	};
 
 	await handlers.get("session_start")?.[0]?.({}, ctx);
+	eventHandlers.get("background-terminals:running-count")?.[0]?.({ running: 1 });
+	handlers.get("agent_settled")?.[0]?.({}, ctx);
+	await new Promise<void>((resolve) => setImmediate(resolve));
+	assert.equal(pendingChecks, 0, "assessment ran while a background terminal was active");
+
+	eventHandlers.get("background-terminals:running-count")?.[0]?.({ running: 0 });
 	handlers.get("agent_settled")?.[0]?.({}, ctx);
 	assert.equal(pendingChecks, 0, "assessment ran inside the settled handler");
 
