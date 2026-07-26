@@ -19,6 +19,7 @@ import { Key, matchesKey, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 const MAX_PASSWORD_ATTEMPTS = 3;
+const DEFAULT_TIMEOUT_SECONDS = 10;
 
 /** True if the shell text would actually invoke the sudo binary. */
 function hasSudoInvocation(command: string): boolean {
@@ -381,7 +382,10 @@ export default function sudoExtension(pi: ExtensionAPI) {
 				description: "Shell command to run under sudo (without a leading sudo)",
 			}),
 			timeout: Type.Optional(
-				Type.Number({ description: "Timeout in seconds (optional, no default timeout)" }),
+				Type.Number({
+					description: "Timeout in seconds (optional, defaults to 10 seconds)",
+					default: DEFAULT_TIMEOUT_SECONDS,
+				}),
 			),
 		}),
 		executionMode: "sequential",
@@ -411,10 +415,11 @@ export default function sudoExtension(pi: ExtensionAPI) {
 
 			onUpdate?.({ content: [{ type: "text", text: `$ ${display}\n` }] });
 
-			const timeoutMs =
+			const timeoutSeconds =
 				params.timeout !== undefined && Number.isFinite(params.timeout) && params.timeout > 0
-					? params.timeout * 1000
-					: undefined;
+					? params.timeout
+					: DEFAULT_TIMEOUT_SECONDS;
+			const timeoutMs = timeoutSeconds * 1000;
 
 			const result = await new Promise<{ code: number; output: string }>((resolve, reject) => {
 				// -n: never prompt (credentials already cached); fail clearly if not
@@ -435,19 +440,16 @@ export default function sudoExtension(pi: ExtensionAPI) {
 				child.stderr?.on("data", append);
 
 				let timedOut = false;
-				const timer =
-					timeoutMs !== undefined
-						? setTimeout(() => {
-								timedOut = true;
-								if (child.pid) {
-									try {
-										process.kill(-child.pid, "SIGTERM");
-									} catch {
-										child.kill("SIGTERM");
-									}
-								}
-							}, timeoutMs)
-						: undefined;
+				const timer = setTimeout(() => {
+					timedOut = true;
+					if (child.pid) {
+						try {
+							process.kill(-child.pid, "SIGTERM");
+						} catch {
+							child.kill("SIGTERM");
+						}
+					}
+				}, timeoutMs);
 
 				const onAbort = () => {
 					if (child.pid) {
@@ -476,7 +478,7 @@ export default function sudoExtension(pi: ExtensionAPI) {
 						return;
 					}
 					if (timedOut) {
-						reject(new Error(`Command timed out after ${params.timeout} seconds`));
+						reject(new Error(`Command timed out after ${timeoutSeconds} seconds`));
 						return;
 					}
 					resolve({ code: code ?? 1, output });
