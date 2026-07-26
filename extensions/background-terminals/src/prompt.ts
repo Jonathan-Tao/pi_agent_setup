@@ -35,7 +35,7 @@ export const BG_START_PROMPT_SNIPPET =
 export const BG_START_PROMPT_GUIDELINES = [
   "Use bg_start for commands expected to run long or indefinitely (servers, watch modes, long builds); use the regular bash tool for quick commands.",
   "bg_start processes receive no stdin — never start a command that requires interactive input.",
-  "After bg_start, keep working; the exit result arrives automatically. Use bg_status only when you need current output before continuing.",
+  "After bg_start, keep working; do not chain sleep commands or poll just to wait. Background terminals notify you when they finish. Use bg_status only when you need current output before continuing.",
 ];
 
 export const BG_START_PARAMETER_DESCRIPTIONS = {

@@ -3,6 +3,7 @@ import test from "node:test";
 import type { OutputView, TerminalSnapshot } from "./src/domain.ts";
 import {
   BG_START_PARAMETER_DESCRIPTIONS,
+  BG_START_PROMPT_GUIDELINES,
   BG_START_TOOL_DESCRIPTION,
   buildKillReport,
   buildStatusResult,
@@ -17,6 +18,12 @@ test("start descriptions identify the platform-specific shell contract", () => {
     BG_START_PARAMETER_DESCRIPTIONS.command,
     /cmd\.exe \/d \/s \/c on Windows/,
   );
+});
+
+test("start guidelines prohibit waiting for automatic completion", () => {
+  const guidelines = BG_START_PROMPT_GUIDELINES.join("\n");
+  assert.match(guidelines, /do not chain sleep commands or poll just to wait/);
+  assert.match(guidelines, /notify you when they finish/);
 });
 
 function view(overrides: Partial<OutputView> = {}): OutputView {
