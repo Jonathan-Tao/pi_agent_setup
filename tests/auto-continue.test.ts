@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import autoContinueExtension, { parseGoalReview } from "../extensions/auto-continue.ts";
+import autoContinueExtension, { parseGoalReview, sessionTranscript } from "../extensions/auto-continue.ts";
 
 test("parses a direct continue decision", () => {
 	assert.deepEqual(
@@ -24,6 +24,25 @@ test("parses fenced completion JSON", () => {
 test("rejects malformed reviewer output", () => {
 	assert.throws(() => parseGoalReview("continue"), /invalid JSON/);
 	assert.throws(() => parseGoalReview('{"decision":"maybe","reason":"unclear"}'), /unknown decision/);
+});
+
+test("reviews the compaction-aware context", () => {
+	const ctx = {
+		sessionManager: {
+			buildContextEntries: () => [
+				{ type: "compaction", summary: "Earlier implementation and decisions." },
+				{
+					type: "message",
+					message: { role: "user", content: [{ type: "text", text: "Run the remaining check." }] },
+				},
+			],
+		},
+	} as any;
+
+	assert.equal(
+		sessionTranscript(ctx),
+		"SESSION SUMMARY:\nEarlier implementation and decisions.\n\n---\n\nUSER:\nRun the remaining check.",
+	);
 });
 
 test("waits for background terminals and defers assessment past settled handlers", async () => {
@@ -55,6 +74,7 @@ test("waits for background terminals and defers assessment past settled handlers
 		isIdle: () => true,
 		sessionManager: {
 			getBranch: () => [{ type: "custom", customType: "auto-continue-state", data: { enabled: true } }],
+			buildContextEntries: () => [],
 			getLeafId: () => "leaf",
 		},
 		ui: {

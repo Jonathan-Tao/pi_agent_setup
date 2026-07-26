@@ -9,7 +9,7 @@ Plan mode provides read-only investigation followed by a single implementation h
 3. The agent uses read-only tools and returns numbered steps under a `Plan:` heading.
 4. Choose one of:
    - **Execute plan** — restore the exact pre-plan tool selection and implement with the full planning conversation available.
-   - **Execute plan (clear planning context)** — start a fresh child session containing only the approved plan and an explicit implementation handoff.
+   - **Execute plan (clear planning context)** — stage `/plan-execute-clear` in the editor. Press Enter to start a fresh child session containing only the approved plan and an explicit implementation handoff.
    - **Stay in plan mode** — continue investigating or refine the plan with another prompt.
    - **Exit plan mode** — restore the exact pre-plan tool selection without implementing.
 
@@ -31,7 +31,7 @@ It disables shell execution, edits, writes, elevation, subagents, and unknown cu
 
 ## Behavior
 
-The extension does not parse plans into todos or manage implementation step-by-step. It does not use completion markers, progress widgets, context rewriting, or automatic per-step turns. The assistant-authored plan is handed back intact in one implementation prompt. During that execution turn, the system prompt explicitly states that plan mode is inactive so stale planning language cannot prevent implementation.
+The extension does not parse plans into todos or manage implementation step-by-step. It does not use completion markers, progress widgets, context rewriting, or automatic per-step turns. The assistant-authored plan is handed back intact in one implementation prompt. During that execution turn, the system prompt explicitly states that plan mode is inactive so stale planning language cannot prevent implementation. Fresh-session execution stages an extension command for explicit submission because extension-injected user messages deliberately bypass slash-command handling; it never sends `/plan-execute-clear` to the model.
 
 Automatic and manual compaction while executing an approved plan use the normal compaction implementation with extra summarizer instructions. The summary must preserve the complete plan, completed and remaining steps, changes, checks, decisions, blockers, and unresolved questions, and direct the continuing agent to resume implementation rather than return to planning. Compaction while still investigating in plan mode is unchanged.
 

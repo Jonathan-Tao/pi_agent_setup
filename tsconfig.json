@@ -13,6 +13,7 @@
   "include": [
     "extensions/auto-continue.ts",
     "tests/auto-continue.test.ts",
+    "tests/plan-mode.test.ts",
     "extensions/background-terminals/**/*.ts",
     "extensions/by-the-way.ts",
     "extensions/copy-all/**/*.ts",

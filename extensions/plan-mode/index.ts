@@ -8,6 +8,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, TextContent } from "@earendil-works/pi-ai";
 import {
 	compact,
+	type CustomEntry,
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
@@ -43,6 +44,7 @@ const CLEAR_EXECUTION_COMMAND = "plan-execute-clear";
 interface PlanModeState {
 	enabled: boolean;
 	executing?: boolean;
+	pendingClearPlan?: string;
 	toolsBeforePlanMode?: string[];
 }
 
@@ -77,6 +79,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		pi.appendEntry<PlanModeState>(STATE_TYPE, {
 			enabled,
 			executing,
+			pendingClearPlan,
 			toolsBeforePlanMode,
 		});
 	}
@@ -149,8 +152,9 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 	async function executePlanWithClearContext(plan: string, ctx: ExtensionContext): Promise<void> {
 		disablePlanMode(ctx, false);
 		pendingClearPlan = plan;
-		ctx.ui.notify("Plan approved. Starting implementation in a fresh session.", "info");
-		pi.sendUserMessage(`/${CLEAR_EXECUTION_COMMAND}`, { deliverAs: "followUp" });
+		persistState();
+		ctx.ui.setEditorText(`/${CLEAR_EXECUTION_COMMAND}`);
+		ctx.ui.notify("Plan approved. Press Enter to start implementation in a fresh session.", "info");
 	}
 
 	pi.registerCommand("plan", {
@@ -163,6 +167,7 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		handler: async (_args, ctx) => {
 			const plan = pendingClearPlan;
 			pendingClearPlan = undefined;
+			persistState();
 			if (!plan) {
 				ctx.ui.notify("No approved plan is queued for execution.", "warning");
 				return;
@@ -277,11 +282,13 @@ export default function planModeExtension(pi: ExtensionAPI): void {
 		const savedState = ctx.sessionManager
 			.getBranch()
 			.filter(
-				(entry) => entry.type === "custom" && entry.customType === STATE_TYPE,
+				(entry): entry is CustomEntry<PlanModeState> =>
+					entry.type === "custom" && entry.customType === STATE_TYPE,
 			)
 			.pop()?.data as PlanModeState | undefined;
 
 		executing = savedState?.executing === true;
+		pendingClearPlan = savedState?.pendingClearPlan;
 		enabled = !executing && (
 			savedState?.enabled === true ||
 			(event.reason === "startup" && pi.getFlag("plan") === true)

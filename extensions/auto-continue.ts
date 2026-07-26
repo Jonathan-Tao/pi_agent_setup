@@ -43,9 +43,13 @@ function textContent(content: unknown): string {
 		.join("\n");
 }
 
-function sessionTranscript(ctx: ExtensionContext): string {
+export function sessionTranscript(ctx: ExtensionContext): string {
 	const sections: string[] = [];
-	for (const entry of ctx.sessionManager.getBranch()) {
+	for (const entry of ctx.sessionManager.buildContextEntries()) {
+		if (entry.type === "compaction" || entry.type === "branch_summary") {
+			sections.push(`SESSION SUMMARY:\n${entry.summary}`);
+			continue;
+		}
 		if (entry.type !== "message") continue;
 		const message = entry.message as Message;
 		const text = textContent(message.content).trim();
