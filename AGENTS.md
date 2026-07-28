@@ -13,10 +13,9 @@ Apply these ASD-STE100-style rules to technical prose:
 - Use one name per thing and one meaning per word. Do not rotate synonyms.
 - Prefer short, common words. Remove filler, marketing adjectives, and empty framing.
 - Use active voice and direct verbs. Avoid stacked auxiliaries and `-ing` main verbs when a simple tense works.
-- Give one instruction per sentence. Limit instructions to 20 words and descriptions to 25 words.
+- Give one instruction per sentence. Keep sentences short and direct.
 - Use complete grammar. Do not use contractions or semicolons. Do not omit articles or demonstratives.
-- Give each paragraph one topic and six sentences at most.
-- Use numbered lists for steps. Start each item with an imperative. Put conditions before commands.
+- Use the imperative for instructions. Put conditions before commands.
 - Preserve code, identifiers, commands, paths, product names, and quoted text exactly.
 - Return only requested text without a preamble, summary, or closing remark.
 
