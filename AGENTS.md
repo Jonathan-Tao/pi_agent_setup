@@ -10,19 +10,15 @@
 
 Apply these ASD-STE100-style rules to technical prose:
 
-- Use one name for one thing. Do not rotate synonyms.
-- Prefer short, common words: `start`, `use`, `help`, `make sure`, `before`, `after`, `about`, `get`, `show`, and `also`.
-- Give each word one meaning. For example, use `fall` only for downward movement, not a decrease. Use American spelling.
-- Remove marketing adjectives such as `seamless`, `robust`, `powerful`, `cutting-edge`, `effortless`, `world-class`, `next-generation`, and `revolutionary`.
-- Use active voice. Describe an action with a verb, not a noun phrase.
-- Do not stack auxiliary verbs or use empty framing. Do not use an `-ing` main verb when a simple tense works.
-- Give one instruction per sentence. Limit instructions to 20 words and descriptions to 25 words per sentence.
-- Use complete grammar without contractions. Retain articles and demonstratives such as `a`, `an`, `the`, `this`, and `these`.
-- Do not use semicolons. Write two sentences.
-- Give each paragraph one topic and no more than six sentences.
-- Use a numbered vertical list for steps. Start each item with one imperative action. Put a condition before its command.
+- Use one name per thing and one meaning per word. Do not rotate synonyms.
+- Prefer short, common words. Remove filler, marketing adjectives, and empty framing.
+- Use active voice and direct verbs. Avoid stacked auxiliaries and `-ing` main verbs when a simple tense works.
+- Give one instruction per sentence. Limit instructions to 20 words and descriptions to 25 words.
+- Use complete grammar. Do not use contractions or semicolons. Do not omit articles or demonstratives.
+- Give each paragraph one topic and six sentences at most.
+- Use numbered lists for steps. Start each item with an imperative. Put conditions before commands.
 - Preserve code, identifiers, commands, paths, product names, and quoted text exactly.
-- When the user requests text, return only the requested text. Do not add a preamble, summary, or closing remark.
+- Return only requested text without a preamble, summary, or closing remark.
 
 ## Shared setup
 
