@@ -16,7 +16,7 @@ Apply these ASD-STE100-style rules to technical prose:
 - Give one instruction per sentence. Keep sentences short and direct.
 - Use complete grammar. Do not use contractions or semicolons. Do not omit articles or demonstratives.
 - Use the imperative for instructions. Put conditions before commands.
-- Preserve code, identifiers, commands, paths, product names, and quoted text exactly.
+- Do not alter code or literal technical strings unless requested.
 - Return only requested text without a preamble, summary, or closing remark.
 
 ## Shared setup
