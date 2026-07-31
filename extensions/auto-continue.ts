@@ -14,6 +14,12 @@ const MAX_TRANSCRIPT_CHARS = 80_000;
 const CONTINUE_PROMPT =
 	"Continue working autonomously on the current task. Take the next concrete steps, using tools as needed; do not merely restate progress or wait for confirmation unless a user decision is required.";
 
+interface AutoContinueState {
+	enabled?: boolean;
+	goal?: string;
+	continuations?: number;
+}
+
 interface GoalReview {
 	decision: "complete" | "continue" | "wait";
 	reason: string;
@@ -119,6 +125,7 @@ function getPiInvocation(args: string[]) {
 
 export default function autoContinueExtension(pi: ExtensionAPI) {
 	let enabled = false;
+	let goal: string | undefined;
 	let checking = false;
 	let continuations = 0;
 	let lastRunErrored = false;
@@ -127,31 +134,65 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 	let runningBackgroundTerminals = 0;
 	let sessionContext: ExtensionContext | undefined;
 
+	function isActive(): boolean {
+		return enabled || goal !== undefined;
+	}
+
+	function modeName(): "continue" | "goal" {
+		return goal === undefined ? "continue" : "goal";
+	}
+
+	function persistState(): void {
+		pi.appendEntry<AutoContinueState>(STATE_TYPE, { enabled, goal, continuations });
+	}
+
 	function updateStatus(ctx: ExtensionContext): void {
+		const mode = modeName();
 		const status = checking
-			? "continue: checking…"
-			: enabled && runningBackgroundTerminals > 0
-				? "continue: waiting for terminal…"
+			? `${mode}: checking…`
+			: isActive() && runningBackgroundTerminals > 0
+				? `${mode}: waiting for terminal…`
 				: enabled
 					? "continue: on"
-					: undefined;
+					: goal !== undefined
+						? "goal: on"
+						: undefined;
 		ctx.ui.setStatus("auto-continue", status);
 	}
 
 	function setEnabled(next: boolean, ctx: ExtensionContext, notify = true): void {
 		enabled = next;
 		if (next) continuations = 0;
-		pi.appendEntry(STATE_TYPE, { enabled });
+		persistState();
 		updateStatus(ctx);
 		if (notify) ctx.ui.notify(`Auto-continue ${enabled ? "enabled" : "disabled"}`, "info");
 	}
 
-	async function runGoalReviewer(ctx: ExtensionContext): Promise<GoalReview> {
+	function setGoal(next: string | undefined, ctx: ExtensionContext, notify = true): void {
+		goal = next;
+		continuations = 0;
+		persistState();
+		updateStatus(ctx);
+		if (notify) ctx.ui.notify(next === undefined ? "Goal mode disabled" : `Goal mode enabled: ${next}`, "info");
+	}
+
+	function stopActiveMode(ctx: ExtensionContext): void {
+		enabled = false;
+		goal = undefined;
+		continuations = 0;
+		persistState();
+		updateStatus(ctx);
+	}
+
+	async function runGoalReviewer(ctx: ExtensionContext, explicitGoal: string | undefined): Promise<GoalReview> {
 		const fastAgent = discoverAgents(ctx.cwd, "user").agents.find((agent) => agent.name === "fast");
 		if (!fastAgent?.model) throw new Error('Auto-continue requires the user-scoped "fast" agent with a model.');
 
 		const prompt = [
 			"You are an independent completion reviewer. Decide whether the active coding session has accomplished the user's actual goals.",
+			explicitGoal === undefined
+				? "Infer the requested outcome from the session transcript."
+				: `Use this explicit active goal as the requested outcome:\n\n${explicitGoal}`,
 			"Judge requested deliverables and appropriate verification, not optional polish. Do not continue merely because more enhancements are possible.",
 			"If work remains that the coding agent can perform autonomously, choose continue and give one concrete next instruction.",
 			"If the goal is complete, choose complete. If progress requires a user decision or missing information, choose wait.",
@@ -224,7 +265,7 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 
 	async function assessAndMaybeContinue(ctx: ExtensionContext): Promise<void> {
 		if (
-			!enabled ||
+			!isActive() ||
 			checking ||
 			runningBackgroundTerminals > 0 ||
 			ctx.hasPendingMessages() ||
@@ -232,12 +273,14 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		)
 			return;
 		const reviewedLeafId = ctx.sessionManager.getLeafId();
+		const reviewedGoal = goal;
+		const reviewedContinueState = enabled;
 		let recheck = false;
 		checking = true;
 		updateStatus(ctx);
 		try {
-			const review = await runGoalReviewer(ctx);
-			if (!enabled) return;
+			const review = await runGoalReviewer(ctx, reviewedGoal);
+			if (!isActive() || goal !== reviewedGoal || enabled !== reviewedContinueState) return;
 			if (!ctx.isIdle() || ctx.hasPendingMessages() || ctx.sessionManager.getLeafId() !== reviewedLeafId) {
 				recheck = true;
 				return;
@@ -245,7 +288,7 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 			pi.appendEntry<GoalReview>(REVIEW_TYPE, review);
 
 			if (review.decision === "complete") {
-				setEnabled(false, ctx, false);
+				stopActiveMode(ctx);
 				ctx.ui.notify(`Goal check: complete — ${review.reason}`, "info");
 				return;
 			}
@@ -254,21 +297,23 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 				return;
 			}
 			if (continuations >= MAX_AUTONOMOUS_CONTINUATIONS) {
-				setEnabled(false, ctx, false);
+				const stoppedMode = modeName() === "goal" ? "Goal mode" : "Auto-continue";
+				stopActiveMode(ctx);
 				ctx.ui.notify(
-					`Auto-continue stopped after ${MAX_AUTONOMOUS_CONTINUATIONS} continuations.`,
+					`${stoppedMode} stopped after ${MAX_AUTONOMOUS_CONTINUATIONS} continuations.`,
 					"warning",
 				);
 				return;
 			}
 
 			continuations += 1;
+			persistState();
 			const next = review.next ?? CONTINUE_PROMPT;
 			pi.sendUserMessage(
 				`Independent goal check: work remains. Continue autonomously.\n\nReason: ${review.reason}\n\nNext: ${next}`,
 			);
 		} catch (error) {
-			if (enabled) {
+			if (isActive()) {
 				ctx.ui.notify(
 					`Goal check failed; no continuation sent: ${error instanceof Error ? error.message : String(error)}`,
 					"warning",
@@ -279,7 +324,7 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 			updateStatus(ctx);
 			if (
 				recheck &&
-				enabled &&
+				isActive() &&
 				runningBackgroundTerminals === 0 &&
 				ctx.isIdle() &&
 				!ctx.hasPendingMessages()
@@ -305,16 +350,25 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 
 	pi.on("session_start", (_event, ctx) => {
 		enabled = false;
+		goal = undefined;
 		checking = false;
 		continuations = 0;
 		lastRunErrored = false;
 		runningBackgroundTerminals = 0;
 		sessionContext = ctx;
+		let savedState: AutoContinueState | undefined;
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type === "custom" && entry.customType === STATE_TYPE) {
-				enabled = (entry.data as { enabled?: boolean } | undefined)?.enabled === true;
+				savedState = entry.data as AutoContinueState | undefined;
 			}
 		}
+		const savedGoal = typeof savedState?.goal === "string" ? savedState.goal.trim() : "";
+		const savedContinuations = savedState?.continuations;
+		goal = savedGoal || undefined;
+		enabled = goal === undefined && savedState?.enabled === true;
+		continuations = isActive() && typeof savedContinuations === "number" && Number.isInteger(savedContinuations) && savedContinuations >= 0
+			? savedContinuations
+			: 0;
 		updateStatus(ctx);
 	});
 
@@ -334,6 +388,10 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 				return;
 			}
 			const next = argument ? argument === "on" : !enabled;
+			if (next && goal !== undefined) {
+				ctx.ui.notify("Goal mode is active. Run /goal off before enabling /continue.", "error");
+				return;
+			}
 			if (next === enabled) {
 				ctx.ui.notify(`Auto-continue already ${enabled ? "enabled" : "disabled"}`, "info");
 				return;
@@ -343,12 +401,52 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 		},
 	});
 
+	pi.registerCommand("goal", {
+		description: "Set, show, or disable reviewer-gated autonomous goal mode",
+		getArgumentCompletions: (prefix) => {
+			const query = prefix.trim().toLowerCase();
+			return "off".startsWith(query) ? [{ value: "off", label: "off" }] : null;
+		},
+		handler: async (args, ctx) => {
+			const argument = args.trim();
+			if (!argument) {
+				ctx.ui.notify(goal === undefined ? "No active goal. Usage: /goal <goal>|off" : `Active goal: ${goal}`, "info");
+				return;
+			}
+			if (argument.toLowerCase() === "off") {
+				if (goal === undefined) {
+					ctx.ui.notify("Goal mode already disabled", "info");
+					return;
+				}
+				setGoal(undefined, ctx);
+				return;
+			}
+			if (enabled) {
+				ctx.ui.notify("Auto-continue is active. Run /continue off before setting a goal.", "error");
+				return;
+			}
+			if (argument === goal) {
+				ctx.ui.notify(`Goal mode already active: ${goal}`, "info");
+				return;
+			}
+			setGoal(argument, ctx);
+			await assessAndMaybeContinue(ctx);
+		},
+	});
+
+	pi.on("before_agent_start", (event) => {
+		if (goal === undefined) return;
+		return {
+			systemPrompt: `${event.systemPrompt}\n\n[ACTIVE GOAL]\n${goal}\n\nWork toward the active goal until it is complete. Use it as the completion criterion. Ask the user only when a decision or missing information blocks progress.`,
+		};
+	});
+
 	pi.on("agent_end", (event) => {
 		lastRunErrored = endedWithError(event.messages);
 	});
 
 	pi.on("agent_settled", (_event, ctx) => {
-		if (!enabled || lastRunErrored) return;
+		if (!isActive() || lastRunErrored) return;
 		if (settledAssessment) clearImmediate(settledAssessment);
 		// Let every other agent_settled handler run first. In particular,
 		// background terminals flush deferred completion messages from their
@@ -361,6 +459,7 @@ export default function autoContinueExtension(pi: ExtensionAPI) {
 
 	pi.on("session_shutdown", () => {
 		enabled = false;
+		goal = undefined;
 		checking = false;
 		lastRunErrored = false;
 		runningBackgroundTerminals = 0;
